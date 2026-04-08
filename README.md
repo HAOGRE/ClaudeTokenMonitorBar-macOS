@@ -1,204 +1,129 @@
-# Claude Monitor — macOS Menu Bar App
+# ClaudeMonitor for macOS
 
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org/)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-blue.svg)](https://developer.apple.com/xcode/swiftui/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A native macOS menu bar application that monitors your Claude Code token usage and costs in real-time — built entirely in Swift with zero external dependencies.
+A native macOS menu bar app that monitors your **Claude Code** token usage and costs in real-time. Built entirely in Swift with zero external dependencies.
 
-> **Inspired by** [Maciek-roboblog/Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor), the original Python-based terminal monitor that pioneered real-time Claude usage tracking. This project reimplements the same core logic (token parsing, cost calculation, deduplication) as a native macOS menu bar app.
+> Inspired by [Maciek-roboblog/Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor).
 
----
-
-## ✨ Features
-
-### Menu Bar Display
-- **Active state** — iStat Menus–style double-row indicator showing live input/output token rates (↗/↙)
-- **Idle state** — Shows accumulated session cost (`$2.45`) when no activity is detected
-- Updates every second; negligible CPU overhead
-
-### Detail Panel (click to open)
-| Section | Content |
-|---------|---------|
-| **Header** | App title · last-update timestamp · manual refresh button |
-| **Real-time rates** | Input and output token speeds with direction indicators |
-| **Stats grid (2×2)** | Total cost · Input tokens · Output tokens · Cache reads |
-| **Top 5 Projects** | Ranked by cost with proportional progress bars |
-| **Recent Records** | Last 5 API calls — model tag, tokens, cost, timestamp |
-| **Footer** | Error message or dominant model name · Quit button |
-
-### Smart & Efficient
-- **Zero dependencies** — Pure Swift + SwiftUI, no third-party packages
-- **Direct file access** — Reads JSONL files from `~/.claude/projects`, no daemon required
-- **Sandbox-compatible** — Temporary read-only entitlement for `~/.claude/`
-- **Deduplication** — Skips duplicate entries via `message_id:request_id` hash
-- **Multi-format support** — Handles `input_tokens`, `inputTokens`, `prompt_tokens`, etc.
+<p align="center">
+  <img src="https://img.shields.io/badge/Universal-Intel%20%2B%20Apple%20Silicon-brightgreen" alt="Universal Binary" />
+</p>
 
 ---
 
-## 🚀 Quick Start
+## Screenshot
 
-### Requirements
-- **macOS 14.0 (Sonoma)** or later
-- **Xcode 15.3** or later
-- **Claude Code** installed (data source: `~/.claude/projects/`)
+<p align="center">
+  <img src="assets/screenshot.png" width="340" alt="ClaudeMonitor Screenshot" />
+</p>
 
-### Build & Run
+---
+
+## Features
+
+- **Live menu bar indicator** -- double-row token rates when active, accumulated cost when idle
+- **Detail panel** -- total cost, input/output tokens, cache reads, top 5 projects, recent records
+- **Auto refresh** -- updates every 5 seconds with smoothed per-second rates
+- **Deduplication** -- skips duplicate entries via `message_id:request_id` hash
+- **Multi-model pricing** -- Opus / Sonnet / Haiku with accurate per-token cost calculation
+- **Zero dependencies** -- pure Swift + SwiftUI, no third-party packages
+- **Universal binary** -- runs natively on both Intel and Apple Silicon Macs
+
+---
+
+## Install
+
+### Option 1: Download DMG (Recommended)
+
+1. Go to [Releases](https://github.com/HAOGRE/ClaudeMonitor-macOS/releases/latest)
+2. Download `ClaudeMonitor.dmg`
+3. Open DMG, drag `ClaudeMonitor.app` to **Applications**
+4. Launch -- the app appears in the menu bar (no Dock icon)
+
+> First launch: right-click the app and select "Open" to bypass Gatekeeper.
+
+### Option 2: Build from Source
 
 ```bash
-# Clone the repository
-git clone https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor.git
-cd Claude-Code-Usage-Monitor
-
-# Open the Xcode project
-open macos/ClaudeMonitor/ClaudeMonitor.xcodeproj
-
+git clone https://github.com/HAOGRE/ClaudeMonitor-macOS.git
+cd ClaudeMonitor-macOS
+open ClaudeMonitor/ClaudeMonitor.xcodeproj
 # Press Cmd+R to build and run
-# The app appears in the menu bar — no Dock icon
 ```
 
-### Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Cmd+R`  | Manual refresh (when detail panel is open) |
-| `Cmd+Q`  | Quit the application |
+**Requirements:** macOS 14.0+, Xcode 15.3+, Claude Code installed (`~/.claude/projects/`)
 
 ---
 
-## 🏗️ Architecture
-
-```
-macos/ClaudeMonitor/
-├── ClaudeMonitor.xcodeproj/         # Xcode project
-└── ClaudeMonitor/
-    ├── ClaudeMonitorApp.swift        # @main entry — MenuBarExtra, label rendering
-    ├── StatusBarView.swift           # Detail panel UI and all sub-components
-    ├── Backend/
-    │   ├── TokenDataReader.swift     # JSONL parser · pricing engine · deduplication
-    │   └── MonitoringViewModel.swift # @Observable state · auto-refresh · rate smoothing
-    └── Assets.xcassets/             # App icon, accent color
-```
-
-### Component Overview
-
-#### `ClaudeMonitorApp.swift`
-- App entry point using `@main` SwiftUI `App` protocol
-- Creates a `MenuBarExtra` with:
-  - **Label view**: renders a compact `NSImage` — double-row rates when active, cost string when idle
-  - **Content view**: the full detail panel (`StatusBarView`)
-- Custom `NSImage` drawing mimics iStat Menus–style compact display
-
-#### `StatusBarView.swift`
-- Six-section panel layout inside a 340 pt wide `VStack`
-- Each section is a private SwiftUI component:
-  `RateBar` · `StatCell` · `ProjectRow` · `RecentEntryRow` · `SectionHeader`
-- Highlights the rate bar with an accent-colored border when token activity is detected
-
-#### `TokenDataReader.swift`
-- Resolves the **real home directory** via `getpwuid()` to bypass sandbox home remapping
-- Recursively enumerates all `.jsonl` files under `~/.claude/projects/`
-- Parses each line with `JSONSerialization`, extracting tokens from multiple candidate paths:
-  - `message.usage` → `usage` → top-level (priority order varies by `type`)
-- Calculates cost using built-in pricing (aligned with the original Python `pricing.py`):
-
-  | Model  | Input ($/1M) | Output ($/1M) | Cache Create | Cache Read |
-  |--------|:------------:|:-------------:|:------------:|:----------:|
-  | Opus   | $15.00       | $75.00        | $18.75       | $1.50      |
-  | Sonnet | $3.00        | $15.00        | $3.75        | $0.30      |
-  | Haiku  | $0.25        | $1.25         | $0.30        | $0.03      |
-
-- Prefers `cost_usd` / `cost` fields from JSONL when available (AUTO mode)
-
-#### `MonitoringViewModel.swift`
-- `@Observable` + `@MainActor` class powering all UI state
-- Auto-refreshes every **5 seconds** via a background `Task`
-- Computes per-second token rates with a **5-sample sliding average** to smooth spikes
-- Skips rate calculation on the first load to avoid a false initial surge
-
----
-
-## 🔍 How It Works
+## How It Works
 
 ```
 ~/.claude/projects/<project>/*.jsonl
-            │
-            ▼
-   TokenDataReader.swift
-   (parse JSON lines · extract tokens · calculate cost · deduplicate)
-            │
-            ▼
-   MonitoringViewModel.swift
-   (aggregate totals · compute rates · manage @Observable state)
-            │
-            ▼
-   StatusBarView.swift + ClaudeMonitorApp.swift
-   (render detail panel · update menu bar label every second)
+        |
+        v
+  TokenDataReader.swift        -- parse JSONL, extract tokens, calculate cost, deduplicate
+        |
+        v
+  MonitoringViewModel.swift    -- aggregate totals, compute rates, manage UI state
+        |
+        v
+  ClaudeMonitorApp.swift       -- render menu bar label (NSImage)
+  StatusBarView.swift           -- render detail panel (SwiftUI)
 ```
 
-Claude Code writes one JSONL file per session. Each line is a JSON record:
+Claude Code writes JSONL session files. The app reads them directly -- no network requests, no daemon, no external servers. All data stays local.
 
-```json
-{
-  "type": "assistant",
-  "timestamp": "2025-04-08T10:23:45.123Z",
-  "message": {
-    "model": "claude-sonnet-4-5",
-    "usage": {
-      "input_tokens": 1024,
-      "output_tokens": 512,
-      "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 200
-    }
-  }
-}
-```
+### Pricing Table
 
-Supported token field variants:
-- `input_tokens` / `inputTokens` / `prompt_tokens`
-- `output_tokens` / `outputTokens` / `completion_tokens`
-- `cache_creation_input_tokens` / `cache_creation_tokens` / `cacheCreationInputTokens`
-- `cache_read_input_tokens` / `cache_read_tokens` / `cacheReadInputTokens`
+| Model  | Input ($/1M) | Output ($/1M) | Cache Create ($/1M) | Cache Read ($/1M) |
+|--------|:---:|:---:|:---:|:---:|
+| Opus   | $15.00 | $75.00 | $18.75 | $1.50 |
+| Sonnet | $3.00  | $15.00 | $3.75  | $0.30 |
+| Haiku  | $0.25  | $1.25  | $0.30  | $0.03 |
+
+If a JSONL entry includes `cost_usd`, that value is used directly.
 
 ---
 
-## ❓ FAQ
+## Project Structure
 
-**Does the app send any data externally?**
-No. It only reads local JSONL files. There are no network requests and no external servers.
+```
+ClaudeMonitor/
+├── ClaudeMonitor.xcodeproj/
+└── ClaudeMonitor/
+    ├── ClaudeMonitorApp.swift          # App entry, MenuBarExtra, menu bar label
+    ├── StatusBarView.swift             # Detail panel UI
+    ├── Backend/
+    │   ├── TokenDataReader.swift       # JSONL parser, pricing engine
+    │   └── MonitoringViewModel.swift   # Observable state, auto-refresh
+    └── Assets.xcassets/                # App icon
+```
 
-**Why does it need Xcode to build?**
-Pre-compiled binaries are not currently distributed. Building from source takes under a minute.
+---
+
+## FAQ
+
+**Does this app send data externally?**
+No. It only reads local files. Zero network requests.
 
 **What if `~/.claude/projects` doesn't exist?**
-The app starts normally and shows a footer message. Data appears automatically once Claude Code creates sessions.
+The app shows a hint message and starts displaying data automatically once Claude Code creates sessions.
 
 **How accurate is the cost estimate?**
-The pricing table matches the official Anthropic API documentation and mirrors the Python implementation. If a JSONL entry includes a `cost_usd` field, that value is used directly.
-
-**Does it work under macOS App Sandbox?**
-Yes. A temporary-exception entitlement grants read-only access to `~/.claude/`. No App Store submission is required.
+Pricing matches the official Anthropic API rates. When `cost_usd` is present in the JSONL data, that exact value is used.
 
 ---
 
-## 🙏 Inspiration & Credits
+## Credits
 
-This project is a native macOS reimplementation of the ideas pioneered by
-**[Maciek-roboblog/Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor)**.
-
-The original Python project provided:
-- The foundation for reading and parsing Claude Code JSONL session files
-- Token extraction strategies and multi-field-name fallback logic
-- The pricing model and model-detection approach (Opus / Sonnet / Haiku)
-- Per-project cost aggregation and deduplication via `message_id:request_id`
-
-This Swift version keeps the same logic faithfully while adding native macOS integration,
-a live-updating menu bar indicator, and zero runtime dependencies.
+Native macOS reimplementation of [Maciek-roboblog/Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor). The original Python project provided the foundation for JSONL parsing, token extraction, pricing model, and deduplication logic.
 
 ---
 
-## 📝 License
+## License
 
-[MIT License](../LICENSE) — free to use, modify, and distribute.
-
+[MIT](LICENSE)
