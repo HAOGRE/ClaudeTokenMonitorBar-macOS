@@ -54,7 +54,7 @@ final class MonitoringViewModel {
     /// 30天每日历史，用于柱状图
     var dailyHistory: [(day: Date, cost: Double, tokens: Int)] = []
 
-    private let logger = Logger(subsystem: "com.claudemonitor.app", category: "viewmodel")
+    private let logger = Logger(subsystem: "com.claudetokenmonitorbar.app", category: "viewmodel")
     private let tokenReader = TokenDataReader()
     nonisolated(unsafe) private var autoRefreshTask: Task<Void, Never>?
 

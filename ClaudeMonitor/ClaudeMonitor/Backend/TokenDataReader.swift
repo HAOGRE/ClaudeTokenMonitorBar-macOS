@@ -81,7 +81,7 @@ private struct ModelPricing {
 /// Token 数据读取器 - 替代 Python reader.py
 /// 读取 ~/.claude/projects 下的所有 .jsonl 文件
 class TokenDataReader {
-    private let logger = Logger(subsystem: "com.claudemonitor.app", category: "tokenreader")
+    private let logger = Logger(subsystem: "com.claudetokenmonitorbar.app", category: "tokenreader")
 
     init() {}
 

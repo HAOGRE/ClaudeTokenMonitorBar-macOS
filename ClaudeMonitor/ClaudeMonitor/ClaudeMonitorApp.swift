@@ -1,13 +1,13 @@
 //
-//  ClaudeMonitorApp.swift
-//  ClaudeMonitor
+//  ClaudeTokenMonitorBarApp.swift
+//  ClaudeTokenMonitorBar
 //
 
 import AppKit
 import SwiftUI
 
 @main
-struct ClaudeMonitorApp: App {
+struct ClaudeTokenMonitorBarApp: App {
     @State private var viewModel = MonitoringViewModel()
 
     var body: some Scene {
