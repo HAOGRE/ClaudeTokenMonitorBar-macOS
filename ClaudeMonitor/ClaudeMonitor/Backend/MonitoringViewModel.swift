@@ -9,6 +9,11 @@ struct MonitoringData {
     var totalInputTokens: Int = 0
     var totalOutputTokens: Int = 0
     var totalCacheReadTokens: Int = 0
+    // 今日统计
+    var todayCost: Double = 0
+    var todayInputTokens: Int = 0
+    var todayOutputTokens: Int = 0
+    var todayCacheReadTokens: Int = 0
     var projectCosts: [String: Double] = [:]
     var modelDistribution: [String: Int] = [:]
     var recentEntries: [UsageEntry] = []
@@ -32,7 +37,9 @@ struct TokenRate {
 
 private struct LoadResult: Sendable {
     let stats: UsageStatistics
+    let todayStats: UsageStatistics
     let projects: [String: UsageStatistics]
+    let dailyData: [Date: UsageStatistics]
 }
 
 // MARK: - 监控视图模型
@@ -44,10 +51,18 @@ final class MonitoringViewModel {
     var tokenRate: TokenRate = TokenRate()
     var isLoading = false
     var errorMessage: String?
+    /// 30天每日历史，用于柱状图
+    var dailyHistory: [(day: Date, cost: Double, tokens: Int)] = []
 
     private let logger = Logger(subsystem: "com.claudemonitor.app", category: "viewmodel")
     private let tokenReader = TokenDataReader()
     nonisolated(unsafe) private var autoRefreshTask: Task<Void, Never>?
+
+    /// 重置日期（持久化到 UserDefaults）
+    private var resetDate: Date? {
+        get { UserDefaults.standard.object(forKey: "statsResetDate") as? Date }
+        set { UserDefaults.standard.set(newValue, forKey: "statsResetDate") }
+    }
 
     // 上一次采样的数据（用于计算速率）
     private var lastSampleInput: Int = 0
@@ -78,13 +93,16 @@ final class MonitoringViewModel {
         errorMessage = nil
 
         let reader = tokenReader
+        let capturedResetDate = resetDate
         let result = await Task.detached(priority: .userInitiated) {
-            let stats = reader.getStatistics()
+            let stats = reader.getStatistics(since: capturedResetDate)
+            let todayStats = reader.getStatistics(hoursBack: 24)
             let projects = reader.getProjectData()
-            return LoadResult(stats: stats, projects: projects)
+            let dailyData = reader.getDailyData(daysBack: 30, since: capturedResetDate)
+            return LoadResult(stats: stats, todayStats: todayStats, projects: projects, dailyData: dailyData)
         }.value
 
-        updateMonitoringData(from: result.stats, projectData: result.projects)
+        updateMonitoringData(from: result.stats, todayStats: result.todayStats, projectData: result.projects, dailyData: result.dailyData)
 
         if result.stats.entries.isEmpty {
             errorMessage = "未找到数据，请检查 ~/.claude/projects 目录"
@@ -93,7 +111,7 @@ final class MonitoringViewModel {
         isLoading = false
     }
 
-    private func updateMonitoringData(from stats: UsageStatistics, projectData: [String: UsageStatistics]) {
+    private func updateMonitoringData(from stats: UsageStatistics, todayStats: UsageStatistics, projectData: [String: UsageStatistics], dailyData: [Date: UsageStatistics]) {
         let now = Date()
         let newInput = stats.totalInputTokens
         let newOutput = stats.totalOutputTokens
@@ -131,10 +149,18 @@ final class MonitoringViewModel {
         updated.totalInputTokens = newInput
         updated.totalOutputTokens = newOutput
         updated.totalCacheReadTokens = stats.totalCacheReadTokens
+        updated.todayCost = todayStats.totalCost
+        updated.todayInputTokens = todayStats.totalInputTokens
+        updated.todayOutputTokens = todayStats.totalOutputTokens
+        updated.todayCacheReadTokens = todayStats.totalCacheReadTokens
         updated.modelDistribution = stats.modelDistribution
         updated.recentEntries = Array(stats.entries.suffix(20))
         updated.lastUpdated = now
         updated.projectCosts = projectData.mapValues { $0.totalCost }
+
+        dailyHistory = dailyData
+            .sorted { $0.key < $1.key }
+            .map { (day: $0.key, cost: $0.value.totalCost, tokens: $0.value.totalInputTokens + $0.value.totalOutputTokens) }
 
         monitoringData = updated
         logger.info("速率: ↑\(String(format: "%.1f", self.tokenRate.inputPerSec))/s ↓\(String(format: "%.1f", self.tokenRate.outputPerSec))/s")
@@ -168,6 +194,18 @@ final class MonitoringViewModel {
             .map { ($0.key, $0.value) }
     }
 
+    /// 重置统计起始时间（不删除 JSONL 文件，只过滤显示范围）
+    func resetStats() {
+        UserDefaults.standard.set(Date(), forKey: "statsResetDate")
+        dailyHistory = []
+        monitoringData = .empty
+        // 重置速率历史，避免重置后出现虚假峰值
+        inputHistory = []
+        outputHistory = []
+        isFirstLoad = true
+        refreshData()
+    }
+
     // MARK: - 格式化工具
 
     static func formatCost(_ cost: Double) -> String {
@@ -175,8 +213,12 @@ final class MonitoringViewModel {
     }
 
     static func formatTokens(_ count: Int) -> String {
-        if count >= 1_000_000 {
+        if count >= 100_000_000 {
+            // M 值 ≥ 100：显示 M（如 273.5 M）
             return String(format: "%.1f M", Double(count) / 1_000_000)
+        } else if count >= 1_000_000 {
+            // M 值 < 100：降级显示精确 K 整数（如 2098 K）
+            return "\(count / 1_000) K"
         } else if count >= 1_000 {
             return String(format: "%.1f K", Double(count) / 1_000)
         }

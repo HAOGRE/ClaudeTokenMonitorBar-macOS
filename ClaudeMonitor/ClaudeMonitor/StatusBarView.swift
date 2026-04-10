@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import Charts
 
 struct StatusBarView: View {
     @Environment(MonitoringViewModel.self) private var viewModel
+    @State private var showingTodayStats = false
+    @State private var showingChart = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,6 +37,13 @@ struct StatusBarView: View {
 
             // ── 最近记录（最新 5 条）───────────────────────────
             recentSection
+                .padding(.horizontal, 16)
+
+            Divider()
+                .padding(.vertical, 8)
+
+            // ── 30天趋势图（可折叠）────────────────────────────
+            chartSection
                 .padding(.horizontal, 16)
 
             Divider()
@@ -87,7 +97,19 @@ struct StatusBarView: View {
     private var statsGrid: some View {
         let data = viewModel.monitoringData
         let rate = viewModel.tokenRate
+        let cost = showingTodayStats ? data.todayCost : data.totalCost
+        let inputTokens = showingTodayStats ? data.todayInputTokens : data.totalInputTokens
+        let outputTokens = showingTodayStats ? data.todayOutputTokens : data.totalOutputTokens
+        let cacheTokens = showingTodayStats ? data.todayCacheReadTokens : data.totalCacheReadTokens
         return VStack(spacing: 8) {
+            // ── 全部 / 今天 切换 ─────────────────────────────────
+            Picker("", selection: $showingTodayStats) {
+                Text("全部").tag(false)
+                Text("今天").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
             // ── 实时速率行（仿 iStat）────────────────────────────
             RateBar(rate: rate)
 
@@ -96,26 +118,26 @@ struct StatusBarView: View {
                 StatCell(
                     icon: "dollarsign.circle.fill",
                     iconColor: .green,
-                    label: "总成本",
-                    value: MonitoringViewModel.formatCost(data.totalCost)
+                    label: showingTodayStats ? "今日成本" : "总成本",
+                    value: MonitoringViewModel.formatCost(cost)
                 )
                 StatCell(
                     icon: "arrow.down.circle.fill",
                     iconColor: .blue,
                     label: "输入 Tokens",
-                    value: MonitoringViewModel.formatTokens(data.totalInputTokens)
+                    value: MonitoringViewModel.formatTokens(inputTokens)
                 )
                 StatCell(
                     icon: "arrow.up.circle.fill",
                     iconColor: .orange,
                     label: "输出 Tokens",
-                    value: MonitoringViewModel.formatTokens(data.totalOutputTokens)
+                    value: MonitoringViewModel.formatTokens(outputTokens)
                 )
                 StatCell(
                     icon: "memorychip.fill",
                     iconColor: .purple,
                     label: "缓存读取",
-                    value: MonitoringViewModel.formatTokens(data.totalCacheReadTokens)
+                    value: MonitoringViewModel.formatTokens(cacheTokens)
                 )
             }
         }
@@ -164,6 +186,33 @@ struct StatusBarView: View {
         }
     }
 
+    // MARK: - 30天趋势图（可折叠）
+
+    private var chartSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showingChart.toggle()
+                }
+            } label: {
+                HStack {
+                    SectionHeader(title: "30天趋势", systemImage: "chart.bar.fill")
+                    Spacer()
+                    Image(systemName: showingChart ? "chevron.up" : "chevron.down")
+                        .imageScale(.small)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.borderless)
+
+            if showingChart {
+                DailyBarChart(history: viewModel.dailyHistory)
+                    .frame(height: 90)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
     // MARK: - 底部工具栏
 
     private var bottomBar: some View {
@@ -191,6 +240,14 @@ struct StatusBarView: View {
             }
 
             Spacer()
+
+            // 重置按钮
+            Button("重置") {
+                viewModel.resetStats()
+            }
+            .font(.caption)
+            .buttonStyle(.borderless)
+            .foregroundColor(.secondary)
 
             // 退出按钮
             Button("退出") {
@@ -392,6 +449,52 @@ private struct SectionHeader: View {
             .fontWeight(.semibold)
             .foregroundColor(.secondary)
             .textCase(.uppercase)
+    }
+}
+
+// MARK: - 子组件：30天每日成本柱状图
+
+private struct DailyBarChart: View {
+    let history: [(day: Date, cost: Double, tokens: Int)]
+
+    var body: some View {
+        if history.isEmpty {
+            Text("暂无历史数据")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 8)
+        } else {
+            Chart(history, id: \.day) { item in
+                BarMark(
+                    x: .value("日期", item.day, unit: .day),
+                    y: .value("成本", item.cost)
+                )
+                .foregroundStyle(Color.accentColor.gradient)
+                .cornerRadius(2)
+            }
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .day, count: 7)) { _ in
+                    AxisGridLine()
+                    AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                        .font(.system(size: 9))
+                }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let v = value.as(Double.self) {
+                            Text(String(format: "$%.2f", v))
+                                .font(.system(size: 9))
+                        }
+                    }
+                }
+            }
+            .chartPlotStyle { plotArea in
+                plotArea.background(Color(.controlBackgroundColor))
+            }
+        }
     }
 }
 

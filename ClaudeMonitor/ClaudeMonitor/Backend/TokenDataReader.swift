@@ -113,7 +113,8 @@ class TokenDataReader {
     /// - Parameters:
     ///   - dataPath: 数据目录路径，nil 表示使用默认 ~/.claude/projects（自动解析真实 Home）
     ///   - hoursBack: 往回查询的小时数，nil 表示查询所有数据
-    func loadUsageEntries(dataPath: String? = nil, hoursBack: Int? = nil) -> [UsageEntry] {
+    ///   - since: 硬性起始时间（用于重置功能），与 hoursBack 取较晚值
+    func loadUsageEntries(dataPath: String? = nil, hoursBack: Int? = nil, since: Date? = nil) -> [UsageEntry] {
         let expandedPath: String
         if let path = dataPath {
             // 显式传入路径时，先尝试 ~ 展开，再使用真实 Home
@@ -133,7 +134,8 @@ class TokenDataReader {
             return []
         }
 
-        let cutoffDate: Date? = hoursBack.map { Date().addingTimeInterval(-Double($0) * 3600) }
+        let hoursBackDate: Date? = hoursBack.map { Date().addingTimeInterval(-Double($0) * 3600) }
+        let cutoffDate: Date? = [hoursBackDate, since].compactMap { $0 }.max()
 
         // 递归查找所有 .jsonl 文件
         let jsonlFiles = findJsonlFiles(in: expandedPath, fileManager: fileManager)
@@ -156,8 +158,8 @@ class TokenDataReader {
     }
 
     /// 获取聚合统计信息
-    func getStatistics(hoursBack: Int? = nil) -> UsageStatistics {
-        UsageStatistics(entries: loadUsageEntries(hoursBack: hoursBack))
+    func getStatistics(hoursBack: Int? = nil, since: Date? = nil) -> UsageStatistics {
+        UsageStatistics(entries: loadUsageEntries(hoursBack: hoursBack, since: since))
     }
 
     /// 按小时分组统计
@@ -170,6 +172,26 @@ class TokenDataReader {
             let comps = calendar.dateComponents([.year, .month, .day, .hour], from: entry.timestamp)
             guard let hourDate = calendar.date(from: comps) else { continue }
             grouped[hourDate, default: []].append(entry)
+        }
+
+        return grouped.mapValues { UsageStatistics(entries: $0) }
+    }
+
+    /// 按天分组统计（最近 N 天）
+    func getDailyData(daysBack: Int = 30, since: Date? = nil) -> [Date: UsageStatistics] {
+        let calendar = Calendar.current
+        // 以 daysBack 天前当天凌晨为起始，避免跨天边界问题
+        let startOfToday = calendar.startOfDay(for: Date())
+        let startDate = calendar.date(byAdding: .day, value: -daysBack, to: startOfToday) ?? Date().addingTimeInterval(-Double(daysBack) * 86400)
+        let effectiveSince = [startDate, since].compactMap { $0 }.max()
+
+        let entries = loadUsageEntries(since: effectiveSince)
+        var grouped: [Date: [UsageEntry]] = [:]
+
+        for entry in entries {
+            let comps = calendar.dateComponents([.year, .month, .day], from: entry.timestamp)
+            guard let dayDate = calendar.date(from: comps) else { continue }
+            grouped[dayDate, default: []].append(entry)
         }
 
         return grouped.mapValues { UsageStatistics(entries: $0) }
