@@ -12,8 +12,18 @@ struct StatusBarView: View {
     @Environment(MonitoringViewModel.self) private var viewModel
     @State private var showingTodayStats = false
     @State private var showingChart = false
+    @State private var showingSettings = false
+    private var settings: AppSettings { AppSettings.shared }
 
     var body: some View {
+        if showingSettings {
+            SettingsView { showingSettings = false }
+        } else {
+            mainView
+        }
+    }
+
+    private var mainView: some View {
         VStack(spacing: 0) {
             // ── 顶部标题栏 ──────────────────────────────────────
             headerBar
@@ -25,26 +35,29 @@ struct StatusBarView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
 
-            Divider()
-                .padding(.vertical, 8)
-
             // ── 项目成本排行 ────────────────────────────────────
-            projectSection
-                .padding(.horizontal, 16)
-
-            Divider()
-                .padding(.vertical, 8)
+            if settings.showProjectSection {
+                Divider()
+                    .padding(.vertical, 8)
+                projectSection
+                    .padding(.horizontal, 16)
+            }
 
             // ── 最近记录（最新 5 条）───────────────────────────
-            recentSection
-                .padding(.horizontal, 16)
-
-            Divider()
-                .padding(.vertical, 8)
+            if settings.showRecentSection {
+                Divider()
+                    .padding(.vertical, 8)
+                recentSection
+                    .padding(.horizontal, 16)
+            }
 
             // ── 30天趋势图（可折叠）────────────────────────────
-            chartSection
-                .padding(.horizontal, 16)
+            if settings.showChartSection {
+                Divider()
+                    .padding(.vertical, 8)
+                chartSection
+                    .padding(.horizontal, 16)
+            }
 
             Divider()
 
@@ -240,6 +253,16 @@ struct StatusBarView: View {
             }
 
             Spacer()
+
+            // 设置按钮
+            Button {
+                showingSettings = true
+            } label: {
+                Image(systemName: "gearshape")
+                    .imageScale(.small)
+            }
+            .buttonStyle(.borderless)
+            .foregroundColor(.secondary)
 
             // 重置按钮
             Button("重置") {

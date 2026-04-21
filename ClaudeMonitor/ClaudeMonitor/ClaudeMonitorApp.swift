@@ -42,9 +42,19 @@ private struct MenuBarLabel: View {
     }
 }
 
+// MARK: - NSImage 缓存（避免显示字符串未变时重复绘制）
+
+private enum ImageCache {
+    static var costKey: String = ""
+    static var costImage: NSImage?
+    static var rateKey: String = ""
+    static var rateImage: NSImage?
+}
+
 // MARK: - NSImage 绘制（无活动时：单行总成本）
 
 private func makeCostImage(cost: String) -> NSImage {
+    if cost == ImageCache.costKey, let cached = ImageCache.costImage { return cached }
     let H: CGFloat = 22
     let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
     let attrs: [NSAttributedString.Key: Any] = [
@@ -64,6 +74,8 @@ private func makeCostImage(cost: String) -> NSImage {
         return true
     }
     image.isTemplate = true
+    ImageCache.costKey = cost
+    ImageCache.costImage = image
     return image
 }
 
@@ -76,6 +88,9 @@ private func makeCostImage(cost: String) -> NSImage {
 //   箭头左对齐，数字右对齐，两行间距极紧凑（参考 iStats）
 
 private func makeMenuBarImage(rate1: String, rate2: String) -> NSImage {
+    let key = "\(rate1)|\(rate2)"
+    if key == ImageCache.rateKey, let cached = ImageCache.rateImage { return cached }
+
     let H: CGFloat    = 22   // 状态栏固定高度
     let minW: CGFloat = 58   // 固定最小宽度，避免速率为 0 时图标过窄
 
@@ -142,5 +157,7 @@ private func makeMenuBarImage(rate1: String, rate2: String) -> NSImage {
         return true
     }
     image.isTemplate = true
+    ImageCache.rateKey = key
+    ImageCache.rateImage = image
     return image
 }

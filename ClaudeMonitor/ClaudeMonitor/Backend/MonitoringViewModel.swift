@@ -95,10 +95,11 @@ final class MonitoringViewModel {
         let reader = tokenReader
         let capturedResetDate = resetDate
         let result = await Task.detached(priority: .userInitiated) {
-            let stats = reader.getStatistics(since: capturedResetDate)
-            let todayStats = reader.getStatistics(hoursBack: 24)
-            let projects = reader.getProjectData()
-            let dailyData = reader.getDailyData(daysBack: 30, since: capturedResetDate)
+            let allData = reader.loadAllData(since: capturedResetDate, daysBack: 30)
+            let stats      = UsageStatistics(entries: allData.allEntries)
+            let todayStats = UsageStatistics(entries: allData.todayEntries)
+            let projects   = allData.projectEntries.mapValues { UsageStatistics(entries: $0) }
+            let dailyData  = allData.dailyEntries.mapValues  { UsageStatistics(entries: $0) }
             return LoadResult(stats: stats, todayStats: todayStats, projects: projects, dailyData: dailyData)
         }.value
 
@@ -169,14 +170,20 @@ final class MonitoringViewModel {
     // MARK: - 自动刷新
 
     private func startAutoRefresh() {
+        autoRefreshTask?.cancel()
         refreshData()
+        let interval = AppSettings.shared.refreshInterval
         autoRefreshTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
+                try? await Task.sleep(for: .seconds(interval))
                 guard !Task.isCancelled else { break }
                 await self?.loadData()
             }
         }
+    }
+
+    func restartAutoRefresh() {
+        startAutoRefresh()
     }
 
     // MARK: - 数据查询

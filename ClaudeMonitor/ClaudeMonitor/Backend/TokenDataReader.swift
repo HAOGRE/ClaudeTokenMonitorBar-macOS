@@ -83,6 +83,37 @@ private struct ModelPricing {
 class TokenDataReader {
     private let logger = Logger(subsystem: "com.claudetokenmonitorbar.app", category: "tokenreader")
 
+    // 静态 formatter 实例，进程生命周期内只创建一次
+    // ISO8601DateFormatter 线程安全；DateFormatter 不线程安全，但 loadData() 有 isLoading 互斥保护
+    private static let isoWithFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private static let isoBasic: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
+    private static let fallbackDateFormatters: [DateFormatter] = {
+        return ["yyyy-MM-dd'T'HH:mm:ss.SSSSSS", "yyyy-MM-dd'T'HH:mm:ss"].map { fmt in
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "en_US_POSIX")
+            f.dateFormat = fmt
+            return f
+        }
+    }()
+
+    // 文件级解析缓存：key = 绝对路径，value = (mtime, 解析结果)
+    // 文件 mtime 未变时直接返回缓存，跳过磁盘读取和 JSON 解析
+    private struct FileCache {
+        var mtime: Date
+        var entries: [UsageEntry]
+    }
+    private var fileCache: [String: FileCache] = [:]
+
     init() {}
 
     // MARK: - 获取真实 Home 目录（绕过沙盒限制）
@@ -160,6 +191,87 @@ class TokenDataReader {
     /// 获取聚合统计信息
     func getStatistics(hoursBack: Int? = nil, since: Date? = nil) -> UsageStatistics {
         UsageStatistics(entries: loadUsageEntries(hoursBack: hoursBack, since: since))
+    }
+
+    /// 一次文件扫描产出所有聚合所需的原始分组，供 MonitoringViewModel 使用
+    struct AllData: Sendable {
+        let allEntries: [UsageEntry]
+        let todayEntries: [UsageEntry]
+        let projectEntries: [String: [UsageEntry]]
+        let dailyEntries: [Date: [UsageEntry]]
+    }
+
+    func loadAllData(since: Date? = nil, daysBack: Int = 30) -> AllData {
+        let expandedPath = claudeDataPath()
+        let fileManager = FileManager.default
+
+        guard fileManager.fileExists(atPath: expandedPath) else {
+            logger.warning("数据目录不存在: \(expandedPath)")
+            return AllData(allEntries: [], todayEntries: [], projectEntries: [:], dailyEntries: [:])
+        }
+
+        let jsonlFiles = findJsonlFiles(in: expandedPath, fileManager: fileManager)
+        guard !jsonlFiles.isEmpty else {
+            return AllData(allEntries: [], todayEntries: [], projectEntries: [:], dailyEntries: [:])
+        }
+
+        let calendar = Calendar.current
+        let now = Date()
+        let todayCutoff = now.addingTimeInterval(-86400)
+        let startOfToday = calendar.startOfDay(for: now)
+        let dailyCutoff = calendar.date(byAdding: .day, value: -daysBack, to: startOfToday)
+            ?? now.addingTimeInterval(-Double(daysBack) * 86400)
+        // 提前跳过条目的截止时间：
+        // - since 有值时取 min(since, dailyCutoff)，因为 allEntries 需要 since 之后的全量数据
+        // - since 为 nil 时只用 dailyCutoff 做提前跳过（allEntries 需要全量历史，不能用 dailyCutoff 截断）
+        let overallCutoff: Date? = since.map { min($0, dailyCutoff) }
+
+        var seenHashes = Set<String>()
+        var allEntries: [UsageEntry] = []
+        var todayEntries: [UsageEntry] = []
+        var projectEntries: [String: [UsageEntry]] = [:]
+        var dailyEntries: [Date: [UsageEntry]] = [:]
+
+        for filePath in jsonlFiles {
+            let dirPath = (filePath as NSString).deletingLastPathComponent
+            let projectName = (dirPath as NSString).lastPathComponent
+
+            // rawEntriesForFile 带 mtime 缓存，返回文件完整条目（无时间过滤）
+            let fileEntries = rawEntriesForFile(at: filePath, seenHashes: &seenHashes)
+
+            for entry in fileEntries {
+                // 按项目：全量历史，与原 getProjectData(cutoffDate: nil) 行为一致
+                projectEntries[projectName, default: []].append(entry)
+
+                // since 有值时提前跳过绝对不需要的条目（性能优化，不影响正确性）
+                if let cutoff = overallCutoff, entry.timestamp < cutoff { continue }
+
+                // 全量（受 since 过滤）
+                if since == nil || entry.timestamp >= since! {
+                    allEntries.append(entry)
+                }
+                // 最近 24h
+                if entry.timestamp >= todayCutoff {
+                    todayEntries.append(entry)
+                }
+                // 按天（仅最近 daysBack 天）
+                if entry.timestamp >= dailyCutoff {
+                    let comps = calendar.dateComponents([.year, .month, .day], from: entry.timestamp)
+                    if let dayDate = calendar.date(from: comps) {
+                        dailyEntries[dayDate, default: []].append(entry)
+                    }
+                }
+            }
+        }
+
+        allEntries.sort { $0.timestamp < $1.timestamp }
+        logger.info("loadAllData: \(allEntries.count) 条记录（来自 \(jsonlFiles.count) 个文件）")
+        return AllData(
+            allEntries: allEntries,
+            todayEntries: todayEntries,
+            projectEntries: projectEntries,
+            dailyEntries: dailyEntries
+        )
     }
 
     /// 按小时分组统计
@@ -243,8 +355,25 @@ class TokenDataReader {
         return result
     }
 
-    /// 解析单个 JSONL 文件
-    private func parseFile(at filePath: String, cutoffDate: Date?, seenHashes: inout Set<String>) -> [UsageEntry] {
+    /// 读取并解析单个 JSONL 文件，带 mtime 缓存（不做时间过滤，存储完整条目）
+    /// 文件 mtime 未变时直接返回缓存，同时将缓存条目的 hash 插入 seenHashes 维持去重正确性
+    private func rawEntriesForFile(at filePath: String, seenHashes: inout Set<String>) -> [UsageEntry] {
+        let attrs = try? FileManager.default.attributesOfItem(atPath: filePath)
+        let mtime = attrs?[.modificationDate] as? Date
+
+        // 只对"冷文件"（超过 60 秒未修改）使用缓存
+        // 活跃文件（Claude 正在写入）mtime 精度仅 1 秒，同一秒内追加的新条目会被缓存遮蔽
+        let isStale = mtime.map { Date().timeIntervalSince($0) > 60 } ?? false
+        if isStale, let mtime, let cached = fileCache[filePath], cached.mtime == mtime {
+            for entry in cached.entries {
+                let hash = "\(entry.messageId):\(entry.requestId)"
+                if !entry.messageId.isEmpty && !entry.requestId.isEmpty {
+                    seenHashes.insert(hash)
+                }
+            }
+            return cached.entries
+        }
+
         guard let content = try? String(contentsOfFile: filePath, encoding: .utf8) else {
             logger.warning("无法读取文件: \(filePath)")
             return []
@@ -262,22 +391,16 @@ class TokenDataReader {
                 continue
             }
 
-            // 解析 timestamp
             guard let timestampStr = json["timestamp"] as? String,
                   let timestamp = parseTimestamp(timestampStr) else {
                 continue
             }
 
-            // 时间过滤
-            if let cutoff = cutoffDate, timestamp < cutoff { continue }
-
-            // 提取 token 数据（与 Python TokenExtractor.extract_tokens 保持一致）
             let tokens = extractTokens(from: json)
             guard tokens.input > 0 || tokens.output > 0 || tokens.cacheRead > 0 || tokens.cacheCreate > 0 else {
                 continue
             }
 
-            // 去重：基于 message_id + request_id（与 Python _create_unique_hash 一致）
             let messageId = extractMessageId(from: json)
             let requestId = (json["request_id"] as? String) ?? (json["requestId"] as? String) ?? ""
             let hash = "\(messageId):\(requestId)"
@@ -286,11 +409,10 @@ class TokenDataReader {
                 seenHashes.insert(hash)
             }
 
-            // 成本（与 Python _map_to_usage_entry 逻辑保持一致）
             let model = extractModel(from: json)
             let costUsd = calculateCost(from: json, model: model, tokens: tokens)
 
-            let entry = UsageEntry(
+            entries.append(UsageEntry(
                 id: hash.isEmpty ? UUID().uuidString : hash,
                 timestamp: timestamp,
                 inputTokens: tokens.input,
@@ -301,11 +423,20 @@ class TokenDataReader {
                 model: model,
                 messageId: messageId,
                 requestId: requestId
-            )
-            entries.append(entry)
+            ))
         }
 
+        if let mtime {
+            fileCache[filePath] = FileCache(mtime: mtime, entries: entries)
+        }
         return entries
+    }
+
+    /// 解析单个 JSONL 文件（带时间过滤，供旧接口 loadUsageEntries 使用）
+    private func parseFile(at filePath: String, cutoffDate: Date?, seenHashes: inout Set<String>) -> [UsageEntry] {
+        let all = rawEntriesForFile(at: filePath, seenHashes: &seenHashes)
+        guard let cutoff = cutoffDate else { return all }
+        return all.filter { $0.timestamp >= cutoff }
     }
 
     // MARK: - 字段提取辅助
@@ -412,22 +543,11 @@ class TokenDataReader {
             normalized = String(normalized.dropLast()) + "+00:00"
         }
 
-        // 完整 ISO8601（带毫秒）
-        let fullFormatter = ISO8601DateFormatter()
-        fullFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fullFormatter.date(from: normalized) { return date }
+        if let date = TokenDataReader.isoWithFractional.date(from: normalized) { return date }
+        if let date = TokenDataReader.isoBasic.date(from: normalized) { return date }
 
-        // 不带毫秒
-        let basicFormatter = ISO8601DateFormatter()
-        basicFormatter.formatOptions = [.withInternetDateTime]
-        if let date = basicFormatter.date(from: normalized) { return date }
-
-        // 备用格式
-        let fallbackFormatter = DateFormatter()
-        fallbackFormatter.locale = Locale(identifier: "en_US_POSIX")
-        for fmt in ["yyyy-MM-dd'T'HH:mm:ss.SSSSSS", "yyyy-MM-dd'T'HH:mm:ss"] {
-            fallbackFormatter.dateFormat = fmt
-            if let date = fallbackFormatter.date(from: str) { return date }
+        for formatter in TokenDataReader.fallbackDateFormatters {
+            if let date = formatter.date(from: str) { return date }
         }
 
         return nil
