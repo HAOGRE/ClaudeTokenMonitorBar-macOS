@@ -4,6 +4,7 @@ struct SettingsView: View {
     var onDismiss: () -> Void = {}
     @Environment(MonitoringViewModel.self) private var viewModel
     private var settings: AppSettings { AppSettings.shared }
+    private var l10n: L10n { L10n.shared }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -11,7 +12,7 @@ struct SettingsView: View {
             HStack {
                 Image(systemName: "gearshape.fill")
                     .foregroundColor(.accentColor)
-                Text("设置")
+                Text(l10n.str(.settingsTitle))
                     .font(.headline)
                 Spacer()
                 Button {
@@ -32,13 +33,13 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 16) {
 
                 // 系统
-                settingsSectionHeader(title: "系统", icon: "desktopcomputer")
+                settingsSectionHeader(title: l10n.str(.sectionSystem), icon: "desktopcomputer")
 
                 SettingsToggleRow(
                     icon: "power",
                     iconColor: .green,
-                    title: "开机启动",
-                    subtitle: "登录后自动启动 Claude 用量监控",
+                    title: l10n.str(.launchAtLoginTitle),
+                    subtitle: l10n.str(.launchAtLoginSubtitle),
                     isOn: Binding(
                         get: { settings.launchAtLogin },
                         set: { settings.launchAtLogin = $0 }
@@ -57,14 +58,30 @@ struct SettingsView: View {
 
                 Divider()
 
+                // 语言
+                settingsSectionHeader(title: "语言 / Language", icon: "globe")
+
+                Picker("", selection: Binding(
+                    get: { settings.language },
+                    set: { settings.language = $0 }
+                )) {
+                    ForEach(AppLanguage.allCases, id: \.self) { lang in
+                        Text(lang.displayName).tag(lang)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+
+                Divider()
+
                 // 显示项
-                settingsSectionHeader(title: "显示项", icon: "eye.fill")
+                settingsSectionHeader(title: l10n.str(.sectionDisplay), icon: "eye.fill")
 
                 SettingsToggleRow(
                     icon: "folder.fill",
                     iconColor: .blue,
-                    title: "项目成本 TOP 5",
-                    subtitle: "显示成本最高的 5 个项目",
+                    title: l10n.str(.topProjectsTitle),
+                    subtitle: l10n.str(.topProjectsSubtitle),
                     isOn: Binding(
                         get: { settings.showProjectSection },
                         set: { settings.showProjectSection = $0 }
@@ -74,8 +91,8 @@ struct SettingsView: View {
                 SettingsToggleRow(
                     icon: "clock.fill",
                     iconColor: .orange,
-                    title: "最近记录",
-                    subtitle: "显示最近 5 条使用记录",
+                    title: l10n.str(.recentRecordsTitle),
+                    subtitle: l10n.str(.recentRecordsSubtitle),
                     isOn: Binding(
                         get: { settings.showRecentSection },
                         set: { settings.showRecentSection = $0 }
@@ -85,8 +102,8 @@ struct SettingsView: View {
                 SettingsToggleRow(
                     icon: "chart.bar.fill",
                     iconColor: .purple,
-                    title: "30 天趋势",
-                    subtitle: "显示近 30 天的成本趋势图",
+                    title: l10n.str(.trendTitle),
+                    subtitle: l10n.str(.trendSubtitle),
                     isOn: Binding(
                         get: { settings.showChartSection },
                         set: { settings.showChartSection = $0 }
@@ -124,9 +141,9 @@ private struct RefreshIntervalRow: View {
                 .frame(width: 22)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text("刷新间隔")
+                Text(L10n.shared.str(.refreshIntervalTitle))
                     .font(.callout)
-                Text("数据自动刷新的时间间隔")
+                Text(L10n.shared.str(.refreshIntervalSubtitle))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -135,7 +152,7 @@ private struct RefreshIntervalRow: View {
 
             Picker("", selection: $interval) {
                 ForEach(AppSettings.refreshIntervalOptions, id: \.self) { sec in
-                    Text("\(sec) 秒").tag(sec)
+                    Text(L10n.shared.refreshSec(sec)).tag(sec)
                 }
             }
             .pickerStyle(.menu)

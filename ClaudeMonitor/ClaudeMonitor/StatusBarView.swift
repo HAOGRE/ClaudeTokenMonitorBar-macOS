@@ -14,6 +14,7 @@ struct StatusBarView: View {
     @State private var showingChart = false
     @State private var showingSettings = false
     private var settings: AppSettings { AppSettings.shared }
+    private var l10n: L10n { L10n.shared }
 
     var body: some View {
         if showingSettings {
@@ -74,7 +75,7 @@ struct StatusBarView: View {
         HStack {
             Image(systemName: "cpu.fill")
                 .foregroundColor(.accentColor)
-            Text("Claude 用量监控")
+            Text(l10n.str(.appTitle))
                 .font(.headline)
 
             Spacer()
@@ -117,8 +118,8 @@ struct StatusBarView: View {
         return VStack(spacing: 8) {
             // ── 全部 / 今天 切换 ─────────────────────────────────
             Picker("", selection: $showingTodayStats) {
-                Text("全部").tag(false)
-                Text("今天").tag(true)
+                Text(l10n.str(.pickerAll)).tag(false)
+                Text(l10n.str(.pickerToday)).tag(true)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -131,25 +132,25 @@ struct StatusBarView: View {
                 StatCell(
                     icon: "dollarsign.circle.fill",
                     iconColor: .green,
-                    label: showingTodayStats ? "今日成本" : "总成本",
+                    label: showingTodayStats ? l10n.str(.todayCost) : l10n.str(.totalCost),
                     value: MonitoringViewModel.formatCost(cost)
                 )
                 StatCell(
                     icon: "arrow.down.circle.fill",
                     iconColor: .blue,
-                    label: "输入 Tokens",
+                    label: l10n.str(.inputTokens),
                     value: MonitoringViewModel.formatTokens(inputTokens)
                 )
                 StatCell(
                     icon: "arrow.up.circle.fill",
                     iconColor: .orange,
-                    label: "输出 Tokens",
+                    label: l10n.str(.outputTokens),
                     value: MonitoringViewModel.formatTokens(outputTokens)
                 )
                 StatCell(
                     icon: "memorychip.fill",
                     iconColor: .purple,
-                    label: "缓存读取",
+                    label: l10n.str(.cacheRead),
                     value: MonitoringViewModel.formatTokens(cacheTokens)
                 )
             }
@@ -160,10 +161,10 @@ struct StatusBarView: View {
 
     private var projectSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionHeader(title: "项目成本 TOP 5", systemImage: "folder.fill")
+            SectionHeader(title: l10n.str(.projectSectionTitle), systemImage: "folder.fill")
 
             if viewModel.monitoringData.projectCosts.isEmpty {
-                Text("暂无项目数据")
+                Text(l10n.str(.noProjectData))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -182,11 +183,11 @@ struct StatusBarView: View {
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionHeader(title: "最近记录", systemImage: "clock.fill")
+            SectionHeader(title: l10n.str(.recentSectionTitle), systemImage: "clock.fill")
 
             let entries = viewModel.monitoringData.recentEntries.suffix(5).reversed()
             if entries.isEmpty {
-                Text("暂无记录")
+                Text(l10n.str(.noRecentData))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -209,7 +210,7 @@ struct StatusBarView: View {
                 }
             } label: {
                 HStack {
-                    SectionHeader(title: "30天趋势", systemImage: "chart.bar.fill")
+                    SectionHeader(title: l10n.str(.chartSectionTitle), systemImage: "chart.bar.fill")
                     Spacer()
                     Image(systemName: showingChart ? "chevron.up" : "chevron.down")
                         .imageScale(.small)
@@ -231,11 +232,11 @@ struct StatusBarView: View {
     private var bottomBar: some View {
         HStack {
             // 错误提示
-            if let error = viewModel.errorMessage {
+            if viewModel.errorMessage != nil {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
                     .imageScale(.small)
-                Text(error)
+                Text(l10n.str(.noDataError))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -265,7 +266,7 @@ struct StatusBarView: View {
             .foregroundColor(.secondary)
 
             // 重置按钮
-            Button("重置") {
+            Button(l10n.str(.resetButton)) {
                 viewModel.resetStats()
             }
             .font(.caption)
@@ -273,7 +274,7 @@ struct StatusBarView: View {
             .foregroundColor(.secondary)
 
             // 退出按钮
-            Button("退出") {
+            Button(l10n.str(.quitButton)) {
                 NSApplication.shared.terminate(nil)
             }
             .font(.caption)
@@ -298,7 +299,7 @@ private struct RateBar: View {
                     .foregroundColor(.blue)
                     .imageScale(.small)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("输入")
+                    Text(L10n.shared.str(.rateInputLabel))
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
                     Text(MonitoringViewModel.formatRate(rate.inputPerSec))
@@ -316,7 +317,7 @@ private struct RateBar: View {
                     .foregroundColor(.orange)
                     .imageScale(.small)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("输出")
+                    Text(L10n.shared.str(.rateOutputLabel))
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
                     Text(MonitoringViewModel.formatRate(rate.outputPerSec))
@@ -482,7 +483,7 @@ private struct DailyBarChart: View {
 
     var body: some View {
         if history.isEmpty {
-            Text("暂无历史数据")
+            Text(L10n.shared.str(.noChartData))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -490,8 +491,8 @@ private struct DailyBarChart: View {
         } else {
             Chart(history, id: \.day) { item in
                 BarMark(
-                    x: .value("日期", item.day, unit: .day),
-                    y: .value("成本", item.cost)
+                    x: .value(L10n.shared.axisDate, item.day, unit: .day),
+                    y: .value(L10n.shared.axisCost, item.cost)
                 )
                 .foregroundStyle(Color.accentColor.gradient)
                 .cornerRadius(2)
