@@ -46,6 +46,17 @@ struct SettingsView: View {
                     )
                 )
 
+                SettingsToggleRow(
+                    icon: "dock.rectangle",
+                    iconColor: .indigo,
+                    title: l10n.str(.showDockIconTitle),
+                    subtitle: l10n.str(.showDockIconSubtitle),
+                    isOn: Binding(
+                        get: { settings.showDockIcon },
+                        set: { settings.showDockIcon = $0 }
+                    )
+                )
+
                 RefreshIntervalRow(
                     interval: Binding(
                         get: { settings.refreshInterval },

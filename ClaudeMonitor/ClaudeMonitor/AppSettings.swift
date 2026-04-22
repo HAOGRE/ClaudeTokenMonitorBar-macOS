@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import ServiceManagement
 
@@ -28,6 +29,14 @@ final class AppSettings {
         }
     }
 
+    // MARK: - Dock 图标
+    var showDockIcon: Bool {
+        didSet {
+            UserDefaults.standard.set(showDockIcon, forKey: "showDockIcon")
+            NSApp.setActivationPolicy(showDockIcon ? .regular : .accessory)
+        }
+    }
+
     // MARK: - 开机启动
     var launchAtLogin: Bool {
         didSet {
@@ -46,6 +55,7 @@ final class AppSettings {
         showRecentSection  = defaults.object(forKey: "showRecentSection")  as? Bool ?? true
         showChartSection   = defaults.object(forKey: "showChartSection")   as? Bool ?? true
         refreshInterval    = defaults.object(forKey: "refreshInterval")    as? Int  ?? 5
+        showDockIcon       = defaults.object(forKey: "showDockIcon")       as? Bool ?? false
 
         let savedLang = defaults.string(forKey: "appLanguage") ?? ""
         language = AppLanguage(rawValue: savedLang) ?? .chinese

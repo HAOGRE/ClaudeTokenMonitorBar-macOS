@@ -8,6 +8,7 @@ import SwiftUI
 
 @main
 struct ClaudeTokenMonitorBarApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var viewModel = MonitoringViewModel()
 
     var body: some Scene {
@@ -19,6 +20,13 @@ struct ClaudeTokenMonitorBarApp: App {
                 .environment(viewModel)
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        let showDock = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? false
+        NSApp.setActivationPolicy(showDock ? .regular : .accessory)
     }
 }
 

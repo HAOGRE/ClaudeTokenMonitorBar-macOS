@@ -217,8 +217,8 @@ class TokenDataReader {
 
         let calendar = Calendar.current
         let now = Date()
-        let todayCutoff = now.addingTimeInterval(-86400)
         let startOfToday = calendar.startOfDay(for: now)
+        let todayCutoff = startOfToday
         let dailyCutoff = calendar.date(byAdding: .day, value: -daysBack, to: startOfToday)
             ?? now.addingTimeInterval(-Double(daysBack) * 86400)
         // 提前跳过条目的截止时间：

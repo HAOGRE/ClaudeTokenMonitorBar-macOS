@@ -155,7 +155,7 @@ final class MonitoringViewModel {
         updated.todayOutputTokens = todayStats.totalOutputTokens
         updated.todayCacheReadTokens = todayStats.totalCacheReadTokens
         updated.modelDistribution = stats.modelDistribution
-        updated.recentEntries = Array(stats.entries.suffix(20))
+        updated.recentEntries = Array(stats.entries.suffix(5))
         updated.lastUpdated = now
         updated.projectCosts = projectData.mapValues { $0.totalCost }
 
@@ -183,6 +183,8 @@ final class MonitoringViewModel {
     }
 
     func restartAutoRefresh() {
+        inputHistory = []
+        outputHistory = []
         startAutoRefresh()
     }
 
@@ -206,9 +208,11 @@ final class MonitoringViewModel {
         UserDefaults.standard.set(Date(), forKey: "statsResetDate")
         dailyHistory = []
         monitoringData = .empty
-        // 重置速率历史，避免重置后出现虚假峰值
         inputHistory = []
         outputHistory = []
+        lastSampleInput = 0
+        lastSampleOutput = 0
+        lastSampleTime = Date()
         isFirstLoad = true
         refreshData()
     }

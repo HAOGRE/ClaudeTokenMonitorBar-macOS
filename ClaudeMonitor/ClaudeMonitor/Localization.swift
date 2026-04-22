@@ -16,6 +16,7 @@ enum LocalizedKey {
     // SettingsView
     case settingsTitle, sectionSystem, sectionDisplay
     case launchAtLoginTitle, launchAtLoginSubtitle
+    case showDockIconTitle, showDockIconSubtitle
     case refreshIntervalTitle, refreshIntervalSubtitle
     case topProjectsTitle, topProjectsSubtitle
     case recentRecordsTitle, recentRecordsSubtitle
@@ -41,7 +42,7 @@ final class L10n {
     var language: AppLanguage = .chinese
 
     func str(_ key: LocalizedKey) -> String {
-        strings[language]?[key] ?? strings[.chinese]![key]!
+        strings[language]?[key] ?? strings[.chinese]?[key] ?? "\(key)"
     }
 
     func refreshSec(_ sec: Int) -> String {
@@ -58,6 +59,8 @@ final class L10n {
             .sectionDisplay:         "显示项",
             .launchAtLoginTitle:     "开机启动",
             .launchAtLoginSubtitle:  "登录后自动启动 Claude 用量监控",
+            .showDockIconTitle:      "显示 Dock 图标",
+            .showDockIconSubtitle:   "在 Dock 栏显示应用图标",
             .refreshIntervalTitle:   "刷新间隔",
             .refreshIntervalSubtitle:"数据自动刷新的时间间隔",
             .topProjectsTitle:       "项目成本 TOP 5",
@@ -94,6 +97,8 @@ final class L10n {
             .sectionDisplay:         "Display",
             .launchAtLoginTitle:     "Launch at Login",
             .launchAtLoginSubtitle:  "Auto-start Claude Usage Monitor on login",
+            .showDockIconTitle:      "Show Dock Icon",
+            .showDockIconSubtitle:   "Display app icon in the Dock",
             .refreshIntervalTitle:   "Refresh Interval",
             .refreshIntervalSubtitle:"Interval for automatic data refresh",
             .topProjectsTitle:       "Top 5 Projects by Cost",
