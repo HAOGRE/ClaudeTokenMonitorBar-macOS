@@ -28,7 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let showDock = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? false
         NSApp.setActivationPolicy(showDock ? .regular : .accessory)
 
-        if !BookmarkManager.shared.hasBookmark {
+        let isSandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+        if isSandboxed && !BookmarkManager.shared.hasBookmark {
             BookmarkManager.shared.requestAccess()
         }
     }
