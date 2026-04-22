@@ -202,7 +202,7 @@ class TokenDataReader {
     }
 
     func loadAllData(since: Date? = nil, daysBack: Int = 30) -> AllData {
-        let expandedPath = claudeDataPath()
+        let expandedPath = BookmarkManager.shared.resolvedPath() ?? claudeDataPath()
         let fileManager = FileManager.default
 
         guard fileManager.fileExists(atPath: expandedPath) else {
