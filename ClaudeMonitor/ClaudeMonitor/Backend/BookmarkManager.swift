@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import OSLog
 
-private let logger = Logger(subsystem: "com.claudetokenmonitorbar.app", category: "BookmarkManager")
+private let logger = Logger(subsystem: "com.haogre.claudetokenmonitor", category: "BookmarkManager")
 private let bookmarkKey = "claudeProjectsBookmark"
 
 /// Manages Security-Scoped Bookmark access to ~/.claude/projects

@@ -81,7 +81,7 @@ private struct ModelPricing {
 /// Token 数据读取器 - 替代 Python reader.py
 /// 读取 ~/.claude/projects 下的所有 .jsonl 文件
 class TokenDataReader {
-    private let logger = Logger(subsystem: "com.claudetokenmonitorbar.app", category: "tokenreader")
+    private let logger = Logger(subsystem: "com.haogre.claudetokenmonitor", category: "tokenreader")
 
     // 静态 formatter 实例，进程生命周期内只创建一次
     // ISO8601DateFormatter 线程安全；DateFormatter 不线程安全，但 loadData() 有 isLoading 互斥保护
