@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="bc0bb797-ef9d-4b58-8909-9a4677b6fdac" name="Changes" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 8,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3C43jVy9svUk0q48EQLSGQD7E7P" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/haogre/github/Claude-Code-Usage-Monitor/macos",
+    "mcopilot_agent_context_state_agent_view_container_tabs": "[{\"id\":\"307ac75b-1726-4a88-9bdd-5675ebd22f2c\",\"displayName\":\"README文档添...\",\"createdAt\":1775631149577,\"closeable\":false,\"conversationId\":\"57807c9b-204f-429c-b988-7bb2c2f88769\",\"tabType\":\"AGENT\",\"isActive\":true}]",
+    "mcopilot_agent_context_state_catpaw_code_repo_config": "{\"rules\":[],\"mcpServers\":\"\",\"commandsDirs\":[],\"agentIds\":[],\"lastUpdated\":\"2026-04-08T06:59:12.364850Z\"}",
+    "mcopilot_agent_context_state_mc.agent.selectedModelType": "50.0",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="bc0bb797-ef9d-4b58-8909-9a4677b6fdac" name="Changes" comment="" />
+      <created>1775631149447</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1775631149447</updated>
+      <workItem from="1775631150497" duration="1009000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
