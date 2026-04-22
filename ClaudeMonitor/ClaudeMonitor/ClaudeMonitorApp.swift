@@ -1,13 +1,13 @@
 //
-//  ClaudeTokenMonitorBarApp.swift
-//  ClaudeTokenMonitorBar
+//  ClaudeTokenMonitorApp.swift
+//  ClaudeTokenMonitor
 //
 
 import AppKit
 import SwiftUI
 
 @main
-struct ClaudeTokenMonitorBarApp: App {
+struct ClaudeTokenMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var viewModel = MonitoringViewModel()
 
