@@ -3,6 +3,10 @@
 <plist version="1.0">
 <dict>
 	<key>com.apple.security.app-sandbox</key>
-	<false/>
+	<true/>
+	<key>com.apple.security.files.home-relative-paths.read-only</key>
+	<array>
+		<string>.claude/projects/</string>
+	</array>
 </dict>
 </plist>
