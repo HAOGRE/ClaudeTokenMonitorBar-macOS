@@ -13,8 +13,10 @@ struct StatusBarView: View {
     @State private var showingTodayStats = false
     @State private var showingChart = false
     @State private var showingSettings = false
+    @State private var showingPaywall = false
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
+    private var pm: PurchaseManager { PurchaseManager.shared }
 
     var body: some View {
         if showingSettings {
@@ -67,6 +69,10 @@ struct StatusBarView: View {
         }
         .frame(width: 340)
         .background(Color(.windowBackgroundColor))
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView { showingPaywall = false }
+                .environment(pm)
+        }
     }
 
     // MARK: - 顶部标题栏
@@ -128,31 +134,39 @@ struct StatusBarView: View {
             RateBar(rate: rate)
 
             // ── 统计卡片（2x2）──────────────────────────────────
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                StatCell(
-                    icon: "dollarsign.circle.fill",
-                    iconColor: .green,
-                    label: showingTodayStats ? l10n.str(.todayCost) : l10n.str(.totalCost),
-                    value: MonitoringViewModel.formatCost(cost)
-                )
-                StatCell(
-                    icon: "arrow.down.circle.fill",
-                    iconColor: .blue,
-                    label: l10n.str(.inputTokens),
-                    value: MonitoringViewModel.formatTokens(inputTokens)
-                )
-                StatCell(
-                    icon: "arrow.up.circle.fill",
-                    iconColor: .orange,
-                    label: l10n.str(.outputTokens),
-                    value: MonitoringViewModel.formatTokens(outputTokens)
-                )
-                StatCell(
-                    icon: "memorychip.fill",
-                    iconColor: .purple,
-                    label: l10n.str(.cacheRead),
-                    value: MonitoringViewModel.formatTokens(cacheTokens)
-                )
+            ZStack {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    StatCell(
+                        icon: "dollarsign.circle.fill",
+                        iconColor: .green,
+                        label: showingTodayStats ? l10n.str(.todayCost) : l10n.str(.totalCost),
+                        value: MonitoringViewModel.formatCost(cost)
+                    )
+                    StatCell(
+                        icon: "arrow.down.circle.fill",
+                        iconColor: .blue,
+                        label: l10n.str(.inputTokens),
+                        value: MonitoringViewModel.formatTokens(inputTokens)
+                    )
+                    StatCell(
+                        icon: "arrow.up.circle.fill",
+                        iconColor: .orange,
+                        label: l10n.str(.outputTokens),
+                        value: MonitoringViewModel.formatTokens(outputTokens)
+                    )
+                    StatCell(
+                        icon: "memorychip.fill",
+                        iconColor: .purple,
+                        label: l10n.str(.cacheRead),
+                        value: MonitoringViewModel.formatTokens(cacheTokens)
+                    )
+                }
+
+                if showingTodayStats && !pm.isPremium {
+                    LockedOverlay(message: l10n.str(.lockedToday)) {
+                        showingPaywall = true
+                    }
+                }
             }
         }
     }
@@ -220,9 +234,20 @@ struct StatusBarView: View {
             .buttonStyle(.borderless)
 
             if showingChart {
-                DailyBarChart(history: viewModel.dailyHistory)
-                    .frame(height: 90)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                ZStack {
+                    DailyBarChart(history: viewModel.dailyHistory)
+                        .frame(height: 90)
+                        .blur(radius: pm.isPremium ? 0 : 4)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+
+                    if !pm.isPremium {
+                        LockedOverlay(message: l10n.str(.lockedChart)) {
+                            showingPaywall = true
+                        }
+                        .frame(height: 90)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
             }
         }
     }

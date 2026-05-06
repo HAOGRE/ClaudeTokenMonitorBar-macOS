@@ -1,0 +1,80 @@
+{
+  "identifier" : "A1B2C3D4-0001-0002-0003-000000000001",
+  "nonConsumableProducts" : [
+    {
+      "displayPrice" : "9.99",
+      "familySharable" : false,
+      "internalID" : "A1B2C3D4-0001-0002-0003-000000000010",
+      "localizations" : [
+        {
+          "description" : "Unlock all premium features forever",
+          "displayName" : "Lifetime Access",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "永久解锁所有高级功能",
+          "displayName" : "终身授权",
+          "locale" : "zh_Hans"
+        }
+      ],
+      "productID" : "com.haogre.claudetokenmonitor.lifetime",
+      "referenceName" : "Lifetime Access",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_locale" : "zh_Hans",
+    "_storefront" : "CHN",
+    "askToBuyEnabled" : false,
+    "failTransactionsEnabled" : false,
+    "interrupted" : false,
+    "locale" : {
+      "countryCode" : "CN",
+      "identifier" : "zh_Hans_CN"
+    },
+    "storefront" : {
+      "countryCode" : "CN",
+      "identifier" : "CHN"
+    },
+    "timeRate" : 1
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "A1B2C3D4-0001-0002-0003-000000000020",
+      "localizations" : [],
+      "name" : "Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "1.99",
+          "familySharable" : false,
+          "groupNumber" : 1,
+          "internalID" : "A1B2C3D4-0001-0002-0003-000000000021",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Access all premium features",
+              "displayName" : "Monthly Premium",
+              "locale" : "en_US"
+            },
+            {
+              "description" : "访问所有高级功能",
+              "displayName" : "月度订阅",
+              "locale" : "zh_Hans"
+            }
+          ],
+          "productID" : "com.haogre.claudetokenmonitor.monthly",
+          "referenceName" : "Monthly Premium",
+          "recurringSubscriptionPeriod" : "P1M",
+          "subscriptionGroupID" : "A1B2C3D4-0001-0002-0003-000000000020",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}

@@ -32,6 +32,13 @@ enum LocalizedKey {
     case noChartData, axisDate, axisCost
     // ViewModel
     case noDataError
+    // Paywall & Subscription
+    case paywallTitle, paywallSubtitle
+    case paywallFeatureToday, paywallFeatureChart
+    case paywallRestore, unlockButton
+    case lockedToday, lockedChart
+    case sectionSubscription
+    case subscriptionActive, subscriptionFree, subscriptionManage, subscriptionUpgrade
 }
 
 @Observable
@@ -90,6 +97,19 @@ final class L10n {
             .axisDate:               "日期",
             .axisCost:               "成本",
             .noDataError:            "未找到数据，请检查 ~/.claude/projects 目录",
+            .paywallTitle:           "解锁高级功能",
+            .paywallSubtitle:        "访问今天统计和30天趋势图",
+            .paywallFeatureToday:    "今天详细用量统计",
+            .paywallFeatureChart:    "30天成本趋势图",
+            .paywallRestore:         "恢复购买",
+            .unlockButton:           "解锁",
+            .lockedToday:            "升级后查看今天统计",
+            .lockedChart:            "升级后查看趋势图",
+            .sectionSubscription:    "订阅",
+            .subscriptionActive:     "高级版已激活",
+            .subscriptionFree:       "免费版",
+            .subscriptionManage:     "管理",
+            .subscriptionUpgrade:    "升级",
         ],
         .english: [
             .settingsTitle:          "Settings",
@@ -128,6 +148,19 @@ final class L10n {
             .axisDate:               "Date",
             .axisCost:               "Cost",
             .noDataError:            "No data found. Please check ~/.claude/projects",
+            .paywallTitle:           "Unlock Premium",
+            .paywallSubtitle:        "Access Today stats & 30-day trend",
+            .paywallFeatureToday:    "Today's detailed usage stats",
+            .paywallFeatureChart:    "30-day cost trend chart",
+            .paywallRestore:         "Restore Purchases",
+            .unlockButton:           "Unlock",
+            .lockedToday:            "Upgrade to view Today stats",
+            .lockedChart:            "Upgrade to view trend chart",
+            .sectionSubscription:    "Subscription",
+            .subscriptionActive:     "Premium Active",
+            .subscriptionFree:       "Free Plan",
+            .subscriptionManage:     "Manage",
+            .subscriptionUpgrade:    "Upgrade",
         ],
     ]
 }

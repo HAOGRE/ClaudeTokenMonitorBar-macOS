@@ -4,6 +4,7 @@
 //
 
 import AppKit
+import StoreKit
 import SwiftUI
 
 @main
@@ -15,6 +16,7 @@ struct ClaudeTokenMonitorApp: App {
         MenuBarExtra {
             StatusBarView()
                 .environment(viewModel)
+                .environment(PurchaseManager.shared)
         } label: {
             MenuBarLabel()
                 .environment(viewModel)
@@ -27,6 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let showDock = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? false
         NSApp.setActivationPolicy(showDock ? .regular : .accessory)
+
+        Task { await PurchaseManager.shared.updatePremiumStatus() }
 
         let isSandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
         if isSandboxed && !BookmarkManager.shared.hasBookmark {

@@ -1,10 +1,13 @@
+import AppKit
 import SwiftUI
 
 struct SettingsView: View {
     var onDismiss: () -> Void = {}
     @Environment(MonitoringViewModel.self) private var viewModel
+    @State private var showingPaywall = false
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
+    private var pm: PurchaseManager { PurchaseManager.shared }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -85,6 +88,22 @@ struct SettingsView: View {
 
                 Divider()
 
+                // 订阅
+                settingsSectionHeader(title: l10n.str(.sectionSubscription), icon: "star.circle.fill")
+
+                SubscriptionStatusRow(onManage: {
+                    if pm.isPremium {
+                        // Open macOS App Store subscriptions management page
+                        if let url = URL(string: "macappstores://apps.apple.com/account/subscriptions") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } else {
+                        showingPaywall = true
+                    }
+                })
+
+                Divider()
+
                 // 显示项
                 settingsSectionHeader(title: l10n.str(.sectionDisplay), icon: "eye.fill")
 
@@ -127,6 +146,10 @@ struct SettingsView: View {
         }
         .frame(width: 340)
         .background(Color(.windowBackgroundColor))
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView { showingPaywall = false }
+                .environment(pm)
+        }
     }
 
     private func settingsSectionHeader(title: String, icon: String) -> some View {
@@ -136,6 +159,38 @@ struct SettingsView: View {
             .foregroundColor(.secondary)
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - 订阅状态行
+
+private struct SubscriptionStatusRow: View {
+    var onManage: () -> Void
+    private var pm: PurchaseManager { PurchaseManager.shared }
+    private var l10n: L10n { L10n.shared }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: pm.isPremium ? "checkmark.circle.fill" : "lock.circle.fill")
+                .foregroundColor(pm.isPremium ? .green : .secondary)
+                .imageScale(.medium)
+                .frame(width: 22)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(pm.isPremium ? l10n.str(.subscriptionActive) : l10n.str(.subscriptionFree))
+                    .font(.callout)
+            }
+
+            Spacer()
+
+            Button(pm.isPremium ? l10n.str(.subscriptionManage) : l10n.str(.subscriptionUpgrade)) {
+                onManage()
+            }
+            .font(.caption)
+            .buttonStyle(.borderless)
+            .foregroundColor(.accentColor)
+        }
+        .padding(.vertical, 2)
     }
 }
 

@@ -51,7 +51,8 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES">
+      allowLocationSimulation = "YES"
+      storeKitConfigurationFileReference = "../ClaudeMonitor/Products.storekit">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
