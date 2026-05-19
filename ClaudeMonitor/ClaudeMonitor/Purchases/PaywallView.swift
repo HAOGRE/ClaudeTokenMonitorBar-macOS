@@ -82,7 +82,21 @@ struct PaywallView: View {
 
             // Products
             Group {
-                if pm.products.isEmpty {
+                if pm.productsLoadFailed {
+                    // Bug 2: show error + retry instead of infinite spinner
+                    VStack(spacing: 8) {
+                        Text(l10n.str(.productsLoadFailed))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button(l10n.str(.retryButton)) {
+                            Task { await pm.retryLoadProducts() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    }
+                    .padding(.vertical, 20)
+                } else if pm.products.isEmpty {
                     ProgressView()
                         .padding(.vertical, 20)
                 } else {
@@ -96,8 +110,14 @@ struct PaywallView: View {
                 }
             }
 
-            // Error
-            if let err = pm.errorMessage {
+            // Restore message (Bug 4) or error message
+            if let msg = pm.restoreMessage {
+                Text(msg)
+                    .font(.caption2)
+                    .foregroundColor(pm.isPremium ? .green : .secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 4)
+            } else if let err = pm.errorMessage {
                 Text(err)
                     .font(.caption2)
                     .foregroundColor(.red)
@@ -112,11 +132,16 @@ struct PaywallView: View {
             .font(.caption)
             .buttonStyle(.borderless)
             .foregroundColor(.secondary)
+            .disabled(pm.purchaseInProgress)
             .padding(.bottom, 12)
         }
         .frame(width: 300)
         .background(Color(.windowBackgroundColor))
         .task { await pm.loadProducts() }
+        // Bug 1: auto-dismiss when purchase completes successfully
+        .onChange(of: pm.isPremium) { _, newValue in
+            if newValue { onDismiss() }
+        }
     }
 }
 
@@ -126,6 +151,8 @@ private struct ProductRow: View {
     @Environment(PurchaseManager.self) private var pm
     let product: Product
     private var isLifetime: Bool { product.id == PurchaseManager.lifetimeID }
+    // Bug 3: only the tapped product shows spinner
+    private var isThisPurchasing: Bool { pm.purchasingProductID == product.id }
 
     var body: some View {
         HStack {
@@ -140,7 +167,7 @@ private struct ProductRow: View {
             Button {
                 Task { await pm.purchase(product) }
             } label: {
-                if pm.purchaseInProgress {
+                if isThisPurchasing {
                     ProgressView().scaleEffect(0.7).frame(width: 50)
                 } else {
                     Text(product.displayPrice)

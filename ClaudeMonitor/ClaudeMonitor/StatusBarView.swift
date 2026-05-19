@@ -21,6 +21,7 @@ struct StatusBarView: View {
     var body: some View {
         if showingSettings {
             SettingsView { showingSettings = false }
+                .environment(pm)
         } else {
             mainView
         }

@@ -4,10 +4,10 @@ import SwiftUI
 struct SettingsView: View {
     var onDismiss: () -> Void = {}
     @Environment(MonitoringViewModel.self) private var viewModel
+    @Environment(PurchaseManager.self) private var pm
     @State private var showingPaywall = false
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
-    private var pm: PurchaseManager { PurchaseManager.shared }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -166,7 +166,7 @@ struct SettingsView: View {
 
 private struct SubscriptionStatusRow: View {
     var onManage: () -> Void
-    private var pm: PurchaseManager { PurchaseManager.shared }
+    @Environment(PurchaseManager.self) private var pm
     private var l10n: L10n { L10n.shared }
 
     var body: some View {

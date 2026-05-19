@@ -30,12 +30,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let showDock = UserDefaults.standard.object(forKey: "showDockIcon") as? Bool ?? false
         NSApp.setActivationPolicy(showDock ? .regular : .accessory)
 
-        Task { await PurchaseManager.shared.updatePremiumStatus() }
-
         let isSandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
         if isSandboxed && !BookmarkManager.shared.hasBookmark {
             BookmarkManager.shared.requestAccess()
         }
+    }
+
+    // Bug 5: refresh subscription status each time the app comes to foreground
+    // so an expired subscription is revoked promptly without requiring a restart
+    func applicationDidBecomeActive(_ notification: Notification) {
+        Task { await PurchaseManager.shared.updatePremiumStatus() }
     }
 }
 
