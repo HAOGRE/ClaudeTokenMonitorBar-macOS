@@ -39,6 +39,8 @@ enum LocalizedKey {
     case lockedToday, lockedChart
     case sectionSubscription
     case subscriptionActive, subscriptionFree, subscriptionManage, subscriptionUpgrade
+    case purchasePending, purchaseRestoreSuccess, purchaseRestoreNotFound
+    case productsLoadFailed, retryButton
 }
 
 @Observable
@@ -65,7 +67,7 @@ final class L10n {
             .sectionSystem:          "系统",
             .sectionDisplay:         "显示项",
             .launchAtLoginTitle:     "开机启动",
-            .launchAtLoginSubtitle:  "登录后自动启动 Claude 用量监控",
+            .launchAtLoginSubtitle:  "登录后自动启动 AI Token 监控",
             .showDockIconTitle:      "显示 Dock 图标",
             .showDockIconSubtitle:   "在 Dock 栏显示应用图标",
             .refreshIntervalTitle:   "刷新间隔",
@@ -76,7 +78,7 @@ final class L10n {
             .recentRecordsSubtitle:  "显示最近 5 条使用记录",
             .trendTitle:             "30 天趋势",
             .trendSubtitle:          "显示近 30 天的成本趋势图",
-            .appTitle:               "Claude 用量监控",
+            .appTitle:               "AI Token 实时监控",
             .pickerAll:              "全部",
             .pickerToday:            "今天",
             .todayCost:              "今日成本",
@@ -96,7 +98,7 @@ final class L10n {
             .noChartData:            "暂无历史数据",
             .axisDate:               "日期",
             .axisCost:               "成本",
-            .noDataError:            "未找到数据，请检查 ~/.claude/projects 目录",
+            .noDataError:            "未找到数据，请检查本地用量数据目录访问权限",
             .paywallTitle:           "解锁高级功能",
             .paywallSubtitle:        "访问今天统计和30天趋势图",
             .paywallFeatureToday:    "今天详细用量统计",
@@ -110,13 +112,18 @@ final class L10n {
             .subscriptionFree:       "免费版",
             .subscriptionManage:     "管理",
             .subscriptionUpgrade:    "升级",
+            .purchasePending:        "购买正在等待审核。",
+            .purchaseRestoreSuccess: "高级版已恢复。",
+            .purchaseRestoreNotFound:"未找到购买记录。",
+            .productsLoadFailed:     "加载产品失败，请重试。",
+            .retryButton:            "重试",
         ],
         .english: [
             .settingsTitle:          "Settings",
             .sectionSystem:          "System",
             .sectionDisplay:         "Display",
             .launchAtLoginTitle:     "Launch at Login",
-            .launchAtLoginSubtitle:  "Auto-start Claude Usage Monitor on login",
+            .launchAtLoginSubtitle:  "Auto-start AI Token Monitor on login",
             .showDockIconTitle:      "Show Dock Icon",
             .showDockIconSubtitle:   "Display app icon in the Dock",
             .refreshIntervalTitle:   "Refresh Interval",
@@ -127,7 +134,7 @@ final class L10n {
             .recentRecordsSubtitle:  "Show the latest 5 usage records",
             .trendTitle:             "30-Day Trend",
             .trendSubtitle:          "Show cost trend chart for the past 30 days",
-            .appTitle:               "Claude Usage Monitor",
+            .appTitle:               "AI Token Monitor",
             .pickerAll:              "All",
             .pickerToday:            "Today",
             .todayCost:              "Today's Cost",
@@ -147,7 +154,7 @@ final class L10n {
             .noChartData:            "No historical data",
             .axisDate:               "Date",
             .axisCost:               "Cost",
-            .noDataError:            "No data found. Please check ~/.claude/projects",
+            .noDataError:            "No data found. Please check local usage data folder access",
             .paywallTitle:           "Unlock Premium",
             .paywallSubtitle:        "Access Today stats & 30-day trend",
             .paywallFeatureToday:    "Today's detailed usage stats",
@@ -161,6 +168,11 @@ final class L10n {
             .subscriptionFree:       "Free Plan",
             .subscriptionManage:     "Manage",
             .subscriptionUpgrade:    "Upgrade",
+            .purchasePending:        "Purchase is pending approval.",
+            .purchaseRestoreSuccess: "Premium restored successfully.",
+            .purchaseRestoreNotFound:"No purchases found.",
+            .productsLoadFailed:     "Failed to load products. Please try again.",
+            .retryButton:            "Retry",
         ],
     ]
 }

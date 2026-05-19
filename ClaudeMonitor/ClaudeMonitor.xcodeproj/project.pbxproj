@@ -24,7 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		25CF945A2F8508E400C06791 /* ClaudeTokenMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClaudeTokenMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		25CF945A2F8508E400C06791 /* AITokenMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AITokenMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		25CF94692F8508E600C06791 /* ClaudeMonitorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeMonitorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		25CF94732F8508E600C06791 /* ClaudeMonitorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeMonitorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -85,7 +85,7 @@
 		25CF945B2F8508E400C06791 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				25CF945A2F8508E400C06791 /* ClaudeTokenMonitor.app */,
+				25CF945A2F8508E400C06791 /* AITokenMonitor.app */,
 				25CF94692F8508E600C06791 /* ClaudeMonitorTests.xctest */,
 				25CF94732F8508E600C06791 /* ClaudeMonitorUITests.xctest */,
 			);
@@ -114,7 +114,7 @@
 			packageProductDependencies = (
 			);
 			productName = ClaudeMonitor;
-			productReference = 25CF945A2F8508E400C06791 /* ClaudeTokenMonitor.app */;
+			productReference = 25CF945A2F8508E400C06791 /* AITokenMonitor.app */;
 			productType = "com.apple.product-type.application";
 		};
 		25CF94682F8508E600C06791 /* ClaudeMonitorTests */ = {
@@ -339,16 +339,16 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = ClaudeTokenMonitor;
+				INFOPLIST_KEY_CFBundleDisplayName = "AI Token Monitor";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.haogre.claudetokenmonitor;
-				PRODUCT_NAME = ClaudeTokenMonitor;
+				PRODUCT_NAME = AITokenMonitor;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -365,7 +365,7 @@
 				DEVELOPMENT_TEAM = FB5Z8HKV28;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.claudemonitor.statusbar.ClaudeMonitorTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -382,7 +382,7 @@
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = FB5Z8HKV28;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.claudemonitor.statusbar.ClaudeMonitorUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -527,16 +527,16 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = ClaudeTokenMonitor;
+				INFOPLIST_KEY_CFBundleDisplayName = "AI Token Monitor";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.haogre.claudetokenmonitor;
-				PRODUCT_NAME = ClaudeTokenMonitor;
+				PRODUCT_NAME = AITokenMonitor;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -558,16 +558,16 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = ClaudeTokenMonitor;
+				INFOPLIST_KEY_CFBundleDisplayName = "AI Token Monitor";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.haogre.claudetokenmonitor;
-				PRODUCT_NAME = ClaudeTokenMonitor;
+				PRODUCT_NAME = AITokenMonitor;
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -584,7 +584,7 @@
 				DEVELOPMENT_TEAM = FB5Z8HKV28;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.claudemonitor.statusbar.ClaudeMonitorTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -603,7 +603,7 @@
 				DEVELOPMENT_TEAM = FB5Z8HKV28;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.claudemonitor.statusbar.ClaudeMonitorTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -620,7 +620,7 @@
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = FB5Z8HKV28;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.claudemonitor.statusbar.ClaudeMonitorUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -637,7 +637,7 @@
 				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = FB5Z8HKV28;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.claudemonitor.statusbar.ClaudeMonitorUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
