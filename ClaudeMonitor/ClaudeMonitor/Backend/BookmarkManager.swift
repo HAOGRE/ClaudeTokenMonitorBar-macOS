@@ -32,7 +32,7 @@ final class BookmarkManager {
     func requestAccess() -> Bool {
         let panel = NSOpenPanel()
         panel.message = NSLocalizedString(
-            "ClaudeTokenMonitor needs access to your Claude data folder to display usage statistics.",
+            "AI Token Monitor needs access to your local usage data folder to display usage statistics.",
             comment: "Sandbox permission panel message"
         )
         panel.prompt = NSLocalizedString("Grant Access", comment: "Sandbox permission panel button")

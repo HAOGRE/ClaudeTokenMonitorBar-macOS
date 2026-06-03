@@ -106,7 +106,7 @@ final class MonitoringViewModel {
         updateMonitoringData(from: result.stats, todayStats: result.todayStats, projectData: result.projects, dailyData: result.dailyData)
 
         if result.stats.entries.isEmpty {
-            errorMessage = "未找到数据，请检查 ~/.claude/projects 目录"
+            errorMessage = "未找到数据，请检查本地用量数据目录访问权限"
         }
 
         isLoading = false
