@@ -47,23 +47,66 @@ struct UsageStatistics {
 // MARK: - 定价模型（与 Python pricing.py 对应）
 
 /// 获取模型的定价（每百万 token 的美元价格）
+/// 官方定价源：https://platform.claude.com/docs/en/about-claude/pricing
 private struct ModelPricing {
     let input: Double
     let output: Double
     let cacheCreation: Double
     let cacheRead: Double
 
-    /// 根据模型名称获取定价（与 Python FALLBACK_PRICING 保持一致）
+    /// 定价配置表（按匹配优先级排序，越靠前越优先）
+    /// 格式：(关键字, 是否前缀匹配, 定价)
+    /// 设计为可扩展：添加新模型只需在此数组中添加一行
+    private static let pricingConfigs: [(keyword: String, isPrefix: Bool, pricing: ModelPricing)] = [
+        // Mythos 系列（Project Glasswing 限定）
+        ("mythos", false, ModelPricing(input: 10.0, output: 50.0, cacheCreation: 12.50, cacheRead: 1.0)),
+
+        // Fable 5
+        ("fable", false, ModelPricing(input: 10.0, output: 50.0, cacheCreation: 12.50, cacheRead: 1.0)),
+
+        // Opus 4.5/4.6/4.7/4.8（新版定价）
+        ("opus-4-5", true, ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
+        ("opus-4-6", true, ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
+        ("opus-4-7", true, ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
+        ("opus-4-8", true, ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
+        // Opus 4/4.1（旧版，已 deprecated）
+        ("opus", false, ModelPricing(input: 15.0, output: 75.0, cacheCreation: 18.75, cacheRead: 1.5)),
+
+        // Haiku 4.5
+        ("haiku-4-5", true, ModelPricing(input: 1.0, output: 5.0, cacheCreation: 1.25, cacheRead: 0.1)),
+        // Haiku 3.5（旧版）
+        ("haiku", false, ModelPricing(input: 0.8, output: 4.0, cacheCreation: 1.0, cacheRead: 0.08)),
+
+        // Sonnet 4.x（默认兜底）
+        ("sonnet", false, ModelPricing(input: 3.0, output: 15.0, cacheCreation: 3.75, cacheRead: 0.3)),
+    ]
+
+    /// 根据模型名称获取定价
+    /// 新增模型支持：在 pricingConfigs 数组中添加配置即可
     static func forModel(_ model: String) -> ModelPricing {
         let lower = model.lowercased()
-        if lower.contains("opus") {
-            return ModelPricing(input: 15.0, output: 75.0, cacheCreation: 18.75, cacheRead: 1.5)
-        } else if lower.contains("haiku") {
-            return ModelPricing(input: 0.25, output: 1.25, cacheCreation: 0.3, cacheRead: 0.03)
-        } else {
-            // 默认 Sonnet 定价
-            return ModelPricing(input: 3.0, output: 15.0, cacheCreation: 3.75, cacheRead: 0.3)
+
+        for config in pricingConfigs {
+            if config.isPrefix {
+                // 前缀匹配（用于版本号区分，如 opus-4-8 优先于 opus）
+                if lower.contains(config.keyword) {
+                    return config.pricing
+                }
+            } else {
+                // 包含匹配（通用名称匹配）
+                if lower.contains(config.keyword) {
+                    return config.pricing
+                }
+            }
         }
+
+        // 默认使用 Sonnet 定价（最保守估计）
+        return ModelPricing(input: 3.0, output: 15.0, cacheCreation: 3.75, cacheRead: 0.3)
+    }
+
+    /// 获取默认定价（用于无法识别模型时）
+    static var `default`: ModelPricing {
+        ModelPricing(input: 3.0, output: 15.0, cacheCreation: 3.75, cacheRead: 0.3)
     }
 
     /// 计算 token 成本（USD）

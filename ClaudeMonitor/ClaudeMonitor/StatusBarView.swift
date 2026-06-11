@@ -452,12 +452,39 @@ private struct RecentEntryRow: View {
     }
 
     private var shortModel: String {
-        // claude-3-5-sonnet-20241022 → sonnet
+        // 模型名称简化显示：claude-sonnet-4-6-20251001 → sonnet
+        // 按优先级匹配（从新模型到旧模型）
         let m = entry.model.lowercased()
+
+        // 1. Mythos 系列（最高级模型）
+        if m.contains("mythos") { return "mythos" }
+
+        // 2. Fable 系列
+        if m.contains("fable") { return "fable" }
+
+        // 3. Opus 系列
         if m.contains("opus") { return "opus" }
+
+        // 4. Sonnet 系列
         if m.contains("sonnet") { return "sonnet" }
+
+        // 5. Haiku 系列
         if m.contains("haiku") { return "haiku" }
-        return String(entry.model.prefix(6))
+
+        // 6. 无法识别时：如果模型名以 "claude-" 开头，尝试提取中间部分
+        // 例如："claude-v3" → "v3", "claude-" → "claude"
+        if m.hasPrefix("claude-") {
+            let suffix = m.dropFirst(7) // 去掉 "claude-"
+            if suffix.isEmpty {
+                return "claude"
+            }
+            // 提取有意义的标识符（最多10字符）
+            let identifier = String(suffix.prefix(10))
+            return identifier
+        }
+
+        // 7. 其他情况：显示完整模型名（最多12字符）
+        return String(entry.model.prefix(12))
     }
 }
 
