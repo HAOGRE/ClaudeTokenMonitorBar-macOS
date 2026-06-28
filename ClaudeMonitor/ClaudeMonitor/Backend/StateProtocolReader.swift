@@ -48,16 +48,20 @@ struct V4LocalHistory: Codable, Sendable {
 
 actor StateProtocolReader {
     private let logger = Logger(subsystem: "com.haogre.claudetokenmonitor", category: "state_reader")
-    private let stateFilePath: String
+    let stateFilePath: String
     
-    init() {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        if let pw = getpwuid(getuid()), let homeDir = pw.pointee.pw_dir {
-            self.stateFilePath = String(cString: homeDir) + "/.claude-monitor/state/latest.json"
-        } else if let envHome = ProcessInfo.processInfo.environment["HOME"] {
-            self.stateFilePath = envHome + "/.claude-monitor/state/latest.json"
+    init(customPath: String? = nil) {
+        if let customPath = customPath {
+            self.stateFilePath = customPath
         } else {
-            self.stateFilePath = home + "/.claude-monitor/state/latest.json"
+            let home = FileManager.default.homeDirectoryForCurrentUser.path
+            if let pw = getpwuid(getuid()), let homeDir = pw.pointee.pw_dir {
+                self.stateFilePath = String(cString: homeDir) + "/.claude-monitor/state/latest.json"
+            } else if let envHome = ProcessInfo.processInfo.environment["HOME"] {
+                self.stateFilePath = envHome + "/.claude-monitor/state/latest.json"
+            } else {
+                self.stateFilePath = home + "/.claude-monitor/state/latest.json"
+            }
         }
     }
     
