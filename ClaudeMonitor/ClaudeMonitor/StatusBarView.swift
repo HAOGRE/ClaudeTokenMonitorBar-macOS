@@ -36,6 +36,14 @@ struct StatusBarView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
 
+            // ── v4 官方限制状态 ─────────────────────────────────
+            if let v4State = viewModel.monitoringData.v4State, let fiveHour = v4State.limits?.five_hour {
+                Divider()
+                    .padding(.vertical, 8)
+                v4LimitSection(fiveHour: fiveHour)
+                    .padding(.horizontal, 16)
+            }
+
             // ── 项目成本排行 ────────────────────────────────────
             if settings.showProjectSection {
                 Divider()
@@ -153,6 +161,47 @@ struct StatusBarView: View {
                     label: l10n.str(.cacheRead),
                     value: MonitoringViewModel.formatTokens(cacheTokens)
                 )
+            }
+        }
+    }
+
+    // MARK: - v4 官方限制状态
+
+    private func v4LimitSection(fiveHour: V4LimitDetail) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            SectionHeader(title: "Official Rate Limits (v4)", systemImage: "shield.checkerboard")
+            
+            let used = fiveHour.tokens_used ?? 0
+            let limit = fiveHour.token_limit ?? 1
+            let percentage = fiveHour.used_percentage ?? (Double(used) / Double(limit) * 100)
+            
+            HStack {
+                Text("5-Hour Window")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(String(format: "%.1f", percentage))%")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(percentage > 90 ? .red : (percentage > 75 ? .orange : .primary))
+            }
+            
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(.separatorColor))
+                        .frame(height: 4)
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(percentage > 90 ? Color.red : (percentage > 75 ? Color.orange : Color.accentColor))
+                        .frame(width: max(0, geo.size.width * CGFloat(percentage / 100)), height: 4)
+                }
+            }
+            .frame(height: 4)
+            
+            if let resetsAt = fiveHour.resets_at {
+                Text("Resets at \(resetsAt)")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
     }
