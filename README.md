@@ -1,13 +1,14 @@
-# ClaudeMonitor for macOS
+# Claude Token Monitor for macOS
 
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org/)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-blue.svg)](https://developer.apple.com/xcode/swiftui/)
+[![Version](https://img.shields.io/badge/version-1.2.0-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A native macOS menu bar app that monitors your **Claude Code** token usage and costs in real-time. Built entirely in Swift with zero external dependencies.
+A native macOS menu bar companion app that monitors your **Claude Code** token usage and costs in real-time. Built entirely in Swift/SwiftUI with zero external dependencies.
 
-> Inspired by [Maciek-roboblog/Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor).
+> **Companion app** for [Maciek-roboblog/Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor) — consumes the v4 state protocol output and displays it in a native macOS menu bar interface.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Universal-Intel%20%2B%20Apple%20Silicon-brightgreen" alt="Universal Binary" />
@@ -18,20 +19,22 @@ A native macOS menu bar app that monitors your **Claude Code** token usage and c
 ## Screenshot
 
 <p align="center">
-  <img src="assets/screenshot.png" width="340" alt="ClaudeMonitor Screenshot" />
+  <img src="assets/screenshot.png" width="340" alt="Claude Token Monitor Screenshot" />
 </p>
 
 ---
 
 ## Features
 
-- **Live menu bar indicator** -- double-row token rates when active, accumulated cost when idle
-- **Detail panel** -- total cost, input/output tokens, cache reads, top 5 projects, recent records
-- **Auto refresh** -- updates every 5 seconds with smoothed per-second rates
-- **Deduplication** -- skips duplicate entries via `message_id:request_id` hash
-- **Multi-model pricing** -- Opus / Sonnet / Haiku with accurate per-token cost calculation
-- **Zero dependencies** -- pure Swift + SwiftUI, no third-party packages
-- **Universal binary** -- runs natively on both Intel and Apple Silicon Macs
+- **Live menu bar indicator** — double-row token rates (↗ input / ↙ output) when Claude is active; switches to accumulated cost when idle
+- **Official Rate Limits (v4)** — when [claude-code-usage-monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor) is running, shows the 5-hour token window with a color-coded progress bar and reset time
+- **Detail panel** — total / today's cost, input / output / cache tokens, top 5 projects by cost, recent 5 records, 30-day trend chart (collapsible)
+- **Auto-refresh** — updates every 5 seconds with smoothed per-second rates
+- **Deduplication** — skips duplicate entries via `message_id:request_id` hash, matching the Python project's logic exactly
+- **Multi-model pricing** — Fable 5, Opus, Sonnet, Haiku with accurate per-token cost calculation
+- **i18n** — English and Chinese UI, defaults to system locale
+- **Zero dependencies** — pure Swift + SwiftUI, no third-party packages
+- **Universal binary** — runs natively on both Intel and Apple Silicon Macs
 
 ---
 
@@ -39,53 +42,67 @@ A native macOS menu bar app that monitors your **Claude Code** token usage and c
 
 ### Option 1: Download DMG (Recommended)
 
-1. Go to [Releases](https://github.com/HAOGRE/ClaudeMonitor-macOS/releases/latest)
-2. Download `ClaudeMonitor.dmg`
-3. Open DMG, drag `ClaudeMonitor.app` to **Applications**
-4. Launch -- the app appears in the menu bar (no Dock icon)
+1. Go to [Releases](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
+2. Download `ClaudeTokenMonitor-v1.2.0.dmg`
+3. Open DMG, drag `ClaudeTokenMonitor.app` to **Applications**
+4. Launch — the app appears in the menu bar immediately (no Dock icon by default)
 
-> First launch: right-click the app and select "Open" to bypass Gatekeeper.
+> **First launch**: right-click → Open to bypass Gatekeeper, or go to System Settings → Privacy & Security → Open Anyway.
 
 ### Option 2: Build from Source
 
 ```bash
-git clone https://github.com/HAOGRE/ClaudeMonitor-macOS.git
-cd ClaudeMonitor-macOS
+git clone https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS.git
+cd ClaudeTokenMonitorBar-macOS
 open ClaudeMonitor/ClaudeMonitor.xcodeproj
-# Press Cmd+R to build and run
+# Select the "ClaudeMonitor" scheme → Cmd+R
 ```
 
-**Requirements:** macOS 14.0+, Xcode 15.3+, Claude Code installed (`~/.claude/projects/`)
+**Requirements:** macOS 14.0+, Xcode 16+, Claude Code installed
 
 ---
 
 ## How It Works
 
 ```
-~/.claude/projects/<project>/*.jsonl
+~/.claude/projects/<project>/*.jsonl          (Claude Code writes these)
         |
         v
-  TokenDataReader.swift        -- parse JSONL, extract tokens, calculate cost, deduplicate
+  TokenDataReader.swift     — parse JSONL, extract tokens, calculate cost, deduplicate
         |
         v
-  MonitoringViewModel.swift    -- aggregate totals, compute rates, manage UI state
+  MonitoringViewModel.swift — aggregate totals, compute rates, manage UI state
         |
         v
-  ClaudeMonitorApp.swift       -- render menu bar label (NSImage)
-  StatusBarView.swift           -- render detail panel (SwiftUI)
+  ClaudeMonitorApp.swift    — render menu bar label (NSImage, double-row rates)
+  StatusBarView.swift       — render detail panel (SwiftUI popup)
+
+
+~/.claude-monitor/state/latest.json          (claude-code-usage-monitor writes this)
+        |
+        v
+  StateProtocolReader.swift — decode v4 state protocol, extract 5-hour window data
+        |
+        v
+  StatusBarView.swift       — render Official Rate Limits (V4) section (optional)
 ```
 
-Claude Code writes JSONL session files. The app reads them directly -- no network requests, no daemon, no external servers. All data stays local.
+Claude Code writes JSONL session files locally. The app reads them directly — no network requests, no daemon, no external servers. **All data stays on your machine.**
 
-### Pricing Table
+The v4 rate limit section appears **only when** [claude-code-usage-monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor) is also running. Without it, all other features work exactly as before.
 
-| Model  | Input ($/1M) | Output ($/1M) | Cache Create ($/1M) | Cache Read ($/1M) |
-|--------|:---:|:---:|:---:|:---:|
-| Opus   | $15.00 | $75.00 | $18.75 | $1.50 |
-| Sonnet | $3.00  | $15.00 | $3.75  | $0.30 |
-| Haiku  | $0.25  | $1.25  | $0.30  | $0.03 |
+### Pricing Reference
 
-If a JSONL entry includes `cost_usd`, that value is used directly.
+| Model | Input ($/1M) | Output ($/1M) | Cache Write ($/1M) | Cache Read ($/1M) |
+|-------|:---:|:---:|:---:|:---:|
+| Fable 5 / Mythos | $10.00 | $50.00 | $12.50 | $1.00 |
+| Opus 4.x | $5.00 | $25.00 | $6.25 | $0.50 |
+| Sonnet 4.x | $3.00 | $15.00 | $3.75 | $0.30 |
+| Haiku 4.5 | $1.00 | $5.00 | $1.25 | $0.10 |
+
+If a JSONL entry includes `cost_usd`, that value is used directly (most accurate).
+
+Source: [Anthropic Pricing](https://platform.claude.com/docs/en/about-claude/pricing)
 
 ---
 
@@ -96,31 +113,53 @@ ClaudeMonitor/
 ├── ClaudeMonitor.xcodeproj/
 └── ClaudeMonitor/
     ├── ClaudeMonitorApp.swift          # App entry, MenuBarExtra, menu bar label
-    ├── StatusBarView.swift             # Detail panel UI
-    ├── Backend/
-    │   ├── TokenDataReader.swift       # JSONL parser, pricing engine
-    │   └── MonitoringViewModel.swift   # Observable state, auto-refresh
-    └── Assets.xcassets/                # App icon
+    ├── StatusBarView.swift             # Detail panel UI (SwiftUI)
+    ├── SettingsView.swift              # Settings panel
+    ├── AppSettings.swift               # Persistent user preferences
+    ├── Localization.swift              # English + Chinese strings
+    └── Backend/
+        ├── TokenDataReader.swift       # JSONL parser, pricing engine, mtime cache
+        ├── MonitoringViewModel.swift   # Observable state, auto-refresh, rate smoothing
+        ├── StateProtocolReader.swift   # v4 state protocol reader (optional)
+        └── BookmarkManager.swift       # Security-scoped bookmark (App Store sandbox)
 ```
+
+---
+
+## v4 State Protocol Integration
+
+This app is a **consumer** of the [claude-code-usage-monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor) v4 state protocol. When the Python tool is running, it writes:
+
+```
+~/.claude-monitor/state/latest.json
+```
+
+The macOS app reads this file each refresh cycle and displays the official 5-hour rate limit data. If the file doesn't exist (Python tool not installed), the v4 section is simply hidden — no errors, no degraded experience.
 
 ---
 
 ## FAQ
 
 **Does this app send data externally?**
-No. It only reads local files. Zero network requests.
+No. It only reads local files (`~/.claude/projects/` and optionally `~/.claude-monitor/`). Zero network requests.
+
+**Do I need to install claude-code-usage-monitor to use this app?**
+No. The core token monitoring (cost, rates, history) works standalone. The **Official Rate Limits (V4)** section is an optional enhancement that requires the Python tool.
 
 **What if `~/.claude/projects` doesn't exist?**
-The app shows a hint message and starts displaying data automatically once Claude Code creates sessions.
+The app shows a hint message and displays data automatically once Claude Code creates sessions.
 
 **How accurate is the cost estimate?**
-Pricing matches the official Anthropic API rates. When `cost_usd` is present in the JSONL data, that exact value is used.
+When `cost_usd` is present in the JSONL entry, that exact value is used. Otherwise, pricing is calculated using the Anthropic official rate table above.
+
+**Why is there both a "Claude Token Monitor" and "AI Token Monitor" version?**
+`ClaudeTokenMonitor` (this repo) is the open-source GitHub distribution. `AI Token Monitor` is the [App Store version](https://apps.apple.com/app/ai-token-monitor/id6744642402) with full sandbox compliance.
 
 ---
 
 ## Credits
 
-Native macOS reimplementation of [Maciek-roboblog/Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor). The original Python project provided the foundation for JSONL parsing, token extraction, pricing model, and deduplication logic.
+Native macOS companion app built on top of the architecture established by [Maciek-roboblog/Claude-Code-Usage-Monitor](https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor). The original Python project defined the v4 state protocol, JSONL parsing patterns, token extraction logic, pricing model, and deduplication approach that this app implements in Swift.
 
 ---
 
