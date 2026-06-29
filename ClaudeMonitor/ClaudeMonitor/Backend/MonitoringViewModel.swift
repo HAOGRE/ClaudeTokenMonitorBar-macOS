@@ -18,6 +18,9 @@ struct MonitoringData {
     var modelDistribution: [String: Int] = [:]
     var recentEntries: [UsageEntry] = []
     var lastUpdated: Date = Date()
+    
+    // V4 状态协议数据
+    var v4State: V4StateProtocol? = nil
 
     static var empty: MonitoringData { MonitoringData() }
 }
@@ -56,6 +59,7 @@ final class MonitoringViewModel {
 
     private let logger = Logger(subsystem: "com.haogre.claudetokenmonitor", category: "viewmodel")
     private let tokenReader = TokenDataReader()
+    private let stateReader = StateProtocolReader()
     nonisolated(unsafe) private var autoRefreshTask: Task<Void, Never>?
 
     /// 重置日期（持久化到 UserDefaults）
@@ -93,26 +97,28 @@ final class MonitoringViewModel {
         errorMessage = nil
 
         let reader = tokenReader
+        let stateR = stateReader
         let capturedResetDate = resetDate
-        let result = await Task.detached(priority: .userInitiated) {
+        let (result, state) = await Task.detached(priority: .userInitiated) {
+            let v4State = await stateR.readState()
             let allData = reader.loadAllData(since: capturedResetDate, daysBack: 30)
             let stats      = UsageStatistics(entries: allData.allEntries)
             let todayStats = UsageStatistics(entries: allData.todayEntries)
             let projects   = allData.projectEntries.mapValues { UsageStatistics(entries: $0) }
             let dailyData  = allData.dailyEntries.mapValues  { UsageStatistics(entries: $0) }
-            return LoadResult(stats: stats, todayStats: todayStats, projects: projects, dailyData: dailyData)
+            return (LoadResult(stats: stats, todayStats: todayStats, projects: projects, dailyData: dailyData), v4State)
         }.value
 
-        updateMonitoringData(from: result.stats, todayStats: result.todayStats, projectData: result.projects, dailyData: result.dailyData)
+        updateMonitoringData(from: result.stats, todayStats: result.todayStats, projectData: result.projects, dailyData: result.dailyData, v4State: state)
 
-        if result.stats.entries.isEmpty {
+        if result.stats.entries.isEmpty && state == nil {
             errorMessage = "未找到数据，请检查本地用量数据目录访问权限"
         }
 
         isLoading = false
     }
 
-    private func updateMonitoringData(from stats: UsageStatistics, todayStats: UsageStatistics, projectData: [String: UsageStatistics], dailyData: [Date: UsageStatistics]) {
+    private func updateMonitoringData(from stats: UsageStatistics, todayStats: UsageStatistics, projectData: [String: UsageStatistics], dailyData: [Date: UsageStatistics], v4State: V4StateProtocol?) {
         let now = Date()
         let newInput = stats.totalInputTokens
         let newOutput = stats.totalOutputTokens
@@ -158,6 +164,12 @@ final class MonitoringViewModel {
         updated.recentEntries = Array(stats.entries.suffix(5))
         updated.lastUpdated = now
         updated.projectCosts = projectData.mapValues { $0.totalCost }
+        updated.v4State = v4State
+
+        // 如果 v4 状态提供了更权威的全部消耗，可覆盖（根据需求，这里我们主要保留官方数据作参考或限额显示，所以优先使用底层计算的今日消费等）
+        if let state = v4State, let history = state.local_history, let tCost = history.total_cost_usd, tCost > 0 {
+            updated.totalCost = tCost
+        }
 
         dailyHistory = dailyData
             .sorted { $0.key < $1.key }
