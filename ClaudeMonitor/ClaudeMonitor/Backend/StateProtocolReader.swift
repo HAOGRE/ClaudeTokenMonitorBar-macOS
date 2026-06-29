@@ -66,18 +66,14 @@ actor StateProtocolReader {
     }
     
     func readState() -> V4StateProtocol? {
-        guard FileManager.default.fileExists(atPath: stateFilePath) else {
-            logger.info("State file not found at \(self.stateFilePath)")
-            return nil
-        }
-        
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: stateFilePath))
-            let decoder = JSONDecoder()
-            let state = try decoder.decode(V4StateProtocol.self, from: data)
+            let state = try JSONDecoder().decode(V4StateProtocol.self, from: data)
             return state
-        } catch {
-            logger.error("Failed to parse state file: \(error.localizedDescription)")
+        } catch let error as NSError {
+            if error.domain != NSCocoaErrorDomain || error.code != NSFileReadNoSuchFileError {
+                logger.error("Failed to read state file: \(error.localizedDescription)")
+            }
             return nil
         }
     }

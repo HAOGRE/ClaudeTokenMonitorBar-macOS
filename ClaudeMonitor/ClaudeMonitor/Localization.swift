@@ -32,6 +32,8 @@ enum LocalizedKey {
     case noChartData, axisDate, axisCost
     // ViewModel
     case noDataError
+    // v4 Rate Limits
+    case v4SectionTitle, v4FiveHourWindow, v4ResetsAt
 }
 
 @Observable
@@ -51,6 +53,15 @@ final class L10n {
 
     var axisDate: String { str(.axisDate) }
     var axisCost: String { str(.axisCost) }
+
+    /// App 标题：GitHub 版固定用品牌名，App Store 版用本地化名称
+    var appTitle: String {
+        #if GITHUB_BUILD
+        return "Claude Token Monitor"
+        #else
+        return str(.appTitle)
+        #endif
+    }
 
     private let strings: [AppLanguage: [LocalizedKey: String]] = [
         .chinese: [
@@ -90,6 +101,9 @@ final class L10n {
             .axisDate:               "日期",
             .axisCost:               "成本",
             .noDataError:            "未找到数据，请检查本地用量数据目录访问权限",
+            .v4SectionTitle:         "官方速率限制 (v4)",
+            .v4FiveHourWindow:       "5 小时窗口",
+            .v4ResetsAt:             "重置于",
         ],
         .english: [
             .settingsTitle:          "Settings",
@@ -128,6 +142,9 @@ final class L10n {
             .axisDate:               "Date",
             .axisCost:               "Cost",
             .noDataError:            "No data found. Please check local usage data folder access",
+            .v4SectionTitle:         "Official Rate Limits (v4)",
+            .v4FiveHourWindow:       "5-Hour Window",
+            .v4ResetsAt:             "Resets at",
         ],
     ]
 }

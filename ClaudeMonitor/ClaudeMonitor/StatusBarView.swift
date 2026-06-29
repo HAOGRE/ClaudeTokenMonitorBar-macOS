@@ -83,7 +83,7 @@ struct StatusBarView: View {
         HStack {
             Image(systemName: "cpu.fill")
                 .foregroundColor(.accentColor)
-            Text(l10n.str(.appTitle))
+            Text(l10n.appTitle)
                 .font(.headline)
 
             Spacer()
@@ -169,14 +169,14 @@ struct StatusBarView: View {
 
     private func v4LimitSection(fiveHour: V4LimitDetail) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionHeader(title: "Official Rate Limits (v4)", systemImage: "shield.checkerboard")
-            
+            SectionHeader(title: l10n.str(.v4SectionTitle), systemImage: "shield.checkerboard")
+
             let used = fiveHour.tokens_used ?? 0
             let limit = fiveHour.token_limit ?? 1
             let percentage = fiveHour.used_percentage ?? (Double(used) / Double(limit) * 100)
-            
+
             HStack {
-                Text("5-Hour Window")
+                Text(l10n.str(.v4FiveHourWindow))
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -184,7 +184,7 @@ struct StatusBarView: View {
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundColor(percentage > 90 ? .red : (percentage > 75 ? .orange : .primary))
             }
-            
+
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 2)
@@ -196,9 +196,9 @@ struct StatusBarView: View {
                 }
             }
             .frame(height: 4)
-            
+
             if let resetsAt = fiveHour.resets_at {
-                Text("Resets at \(resetsAt)")
+                Text("\(l10n.str(.v4ResetsAt)) \(resetsAt)")
                     .font(.system(size: 9))
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
