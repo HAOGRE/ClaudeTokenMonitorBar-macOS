@@ -4,7 +4,7 @@ import os.log
 // MARK: - 数据模型（与实际 JSONL 格式对应）
 
 /// 从 JSONL 文件解析出的原始使用记录
-struct UsageEntry: Identifiable {
+struct UsageEntry: Identifiable, Sendable {
     let id: String          // message_id + request_id 组合
     let timestamp: Date
     let inputTokens: Int
@@ -18,7 +18,7 @@ struct UsageEntry: Identifiable {
 }
 
 /// token 使用统计数据
-struct UsageStatistics {
+struct UsageStatistics: Sendable {
     let totalInputTokens: Int
     let totalOutputTokens: Int
     let totalCacheReadTokens: Int
@@ -244,7 +244,7 @@ class TokenDataReader {
         let dailyEntries: [Date: [UsageEntry]]
     }
 
-    func loadAllData(since: Date? = nil, daysBack: Int = 30) -> AllData {
+    func loadRawAllData(since: Date? = nil, daysBack: Int = 30) -> AllData {
         let expandedPath = BookmarkManager.shared.resolvedPath() ?? claudeDataPath()
         let fileManager = FileManager.default
 
@@ -594,5 +594,48 @@ class TokenDataReader {
         }
 
         return nil
+    }
+}
+
+// MARK: - AgentLogReader 兼容层
+
+/// 让 TokenDataReader 作为 Claude Code 的 AgentLogReader 实现
+/// 通过 extension 添加协议遵循，不修改原有代码
+extension TokenDataReader: AgentLogReader {
+    var kind: AgentKind { .claude }
+
+    var isInstalled: Bool {
+        let path = realHomeDirectory() + "/.claude/projects"
+        return FileManager.default.fileExists(atPath: path)
+    }
+
+    /// 适配 AgentLogReader 协议接口，将 loadAllData 结果转换为 AllAgentData
+    /// 注意：不能调用 self.loadAllData(since:daysBack:)（同名歧义），改用 loadRawAllData
+    func loadAllData(since: Date?, daysBack: Int) -> AllAgentData {
+        let raw = loadRawAllData(since: since, daysBack: daysBack)
+        let allStats   = UsageStatistics(entries: raw.allEntries)
+        let todayStats = UsageStatistics(entries: raw.todayEntries)
+        let projectCosts = raw.projectEntries.mapValues { UsageStatistics(entries: $0).totalCost }
+        let daily = raw.dailyEntries
+            .sorted { $0.key < $1.key }
+            .map { (day: $0.key, cost: UsageStatistics(entries: $0.value).totalCost,
+                    tokens: $0.value.reduce(0) { $0 + $1.inputTokens + $1.outputTokens }) }
+
+        // v4 限额状态通过 StateProtocolReader 在 ViewModel 层注入，这里返回 nil
+        return AllAgentData(
+            agentKind: .claude,
+            totalCost: allStats.totalCost,
+            totalInputTokens: allStats.totalInputTokens,
+            totalOutputTokens: allStats.totalOutputTokens,
+            totalCacheReadTokens: allStats.totalCacheReadTokens,
+            todayCost: todayStats.totalCost,
+            todayInputTokens: todayStats.totalInputTokens,
+            todayOutputTokens: todayStats.totalOutputTokens,
+            todayCacheReadTokens: todayStats.totalCacheReadTokens,
+            recentEntries: Array(raw.allEntries.suffix(5)),
+            projectCosts: projectCosts,
+            dailyHistory: daily,
+            rateLimitState: nil
+        )
     }
 }

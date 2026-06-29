@@ -41,15 +41,16 @@ private struct MenuBarLabel: View {
     @Environment(MonitoringViewModel.self) private var viewModel
 
     var body: some View {
-        let rate = viewModel.tokenRate
+        // 使用聚合速率：所有 Agent 的输入/输出速率叠加（类似 iStat 的总网速）
+        let rate = viewModel.aggregatedTokenRate
         if rate.hasActivity {
             // 有活动：双行速率
             let rate1 = MonitoringViewModel.formatRate(rate.inputPerSec)
             let rate2 = MonitoringViewModel.formatRate(rate.outputPerSec)
             Image(nsImage: makeMenuBarImage(rate1: rate1, rate2: rate2))
         } else {
-            // 无活动：单行显示总成本
-            let cost = MonitoringViewModel.formatCost(viewModel.monitoringData.totalCost)
+            // 无活动：单行显示所有 Agent 今日总成本
+            let cost = MonitoringViewModel.formatCost(viewModel.aggregatedTodayCost)
             Image(nsImage: makeCostImage(cost: cost))
         }
     }

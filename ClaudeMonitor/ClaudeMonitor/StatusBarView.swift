@@ -13,6 +13,8 @@ struct StatusBarView: View {
     @State private var showingTodayStats = false
     @State private var showingChart = false
     @State private var showingSettings = false
+    /// 当前展开的 Agent（nil = 全部折叠，展开时显示该 Agent 的详情区块）
+    @State private var expandedAgent: AgentKind? = nil
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
 
@@ -36,28 +38,50 @@ struct StatusBarView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
 
-            // ── v4 官方限制状态 ─────────────────────────────────
-            if let v4State = viewModel.monitoringData.v4State, let fiveHour = v4State.limits?.five_hour {
-                Divider()
-                    .padding(.vertical, 8)
-                v4LimitSection(fiveHour: fiveHour)
-                    .padding(.horizontal, 16)
-            }
+            // ── Agents 概览（多 Agent 时显示）─────────────────────
+            Divider()
+                .padding(.vertical, 8)
+            agentsSection
+                .padding(.horizontal, 16)
 
-            // ── 项目成本排行 ────────────────────────────────────
-            if settings.showProjectSection {
-                Divider()
-                    .padding(.vertical, 8)
-                projectSection
-                    .padding(.horizontal, 16)
-            }
+            // ── 展开 Agent 的详情区块 ───────────────────────────
+            if let expanded = expandedAgent,
+               let agentData = viewModel.agentsData.first(where: { $0.agentKind == expanded }) {
 
-            // ── 最近记录（最新 5 条）───────────────────────────
-            if settings.showRecentSection {
-                Divider()
-                    .padding(.vertical, 8)
-                recentSection
-                    .padding(.horizontal, 16)
+                // Claude 专有：v4 官方限制状态
+                if expanded == .claude,
+                   let v4State = viewModel.monitoringData.v4State,
+                   let fiveHour = v4State.limits?.five_hour {
+                    Divider()
+                        .padding(.vertical, 8)
+                    v4LimitSection(fiveHour: fiveHour)
+                        .padding(.horizontal, 16)
+                }
+
+                // 各 Agent 通用限额状态
+                if expanded != .claude,
+                   let rateLimit = agentData.rateLimitState {
+                    Divider()
+                        .padding(.vertical, 8)
+                    agentRateLimitSection(rateLimit: rateLimit, agentName: expanded.displayName)
+                        .padding(.horizontal, 16)
+                }
+
+                // 项目成本排行（展开 Agent 专属数据）
+                if settings.showProjectSection && !agentData.projectCosts.isEmpty {
+                    Divider()
+                        .padding(.vertical, 8)
+                    agentProjectSection(projectCosts: agentData.projectCosts)
+                        .padding(.horizontal, 16)
+                }
+
+                // 最近记录（展开 Agent 专属数据）
+                if settings.showRecentSection && !agentData.recentEntries.isEmpty {
+                    Divider()
+                        .padding(.vertical, 8)
+                    agentRecentSection(entries: agentData.recentEntries)
+                        .padding(.horizontal, 16)
+                }
             }
 
             // ── 30天趋势图（可折叠）────────────────────────────
@@ -117,12 +141,30 @@ struct StatusBarView: View {
     // MARK: - 核心统计卡片 + 实时速率
 
     private var statsGrid: some View {
+        // 顶部统计区显示聚合数据（所有 Agent 叠加）
+        // 使用聚合速率保持与状态栏图标一致
+        let rate = viewModel.aggregatedTokenRate
+
+        // 多 Agent 有数据时用聚合值，否则回退到 Claude 专用数据保持兼容
+        let hasMultiAgent = viewModel.agentsData.count > 1
         let data = viewModel.monitoringData
-        let rate = viewModel.tokenRate
-        let cost = showingTodayStats ? data.todayCost : data.totalCost
-        let inputTokens = showingTodayStats ? data.todayInputTokens : data.totalInputTokens
-        let outputTokens = showingTodayStats ? data.todayOutputTokens : data.totalOutputTokens
-        let cacheTokens = showingTodayStats ? data.todayCacheReadTokens : data.totalCacheReadTokens
+        let cost: Double
+        let inputTokens: Int
+        let outputTokens: Int
+        let cacheTokens: Int
+        if hasMultiAgent {
+            cost         = showingTodayStats ? viewModel.aggregatedTodayCost          : viewModel.aggregatedTotalCost
+            inputTokens  = showingTodayStats ? viewModel.aggregatedTodayInputTokens   : viewModel.agentsData.reduce(0) { $0 + $1.totalInputTokens }
+            outputTokens = showingTodayStats ? viewModel.aggregatedTodayOutputTokens  : viewModel.agentsData.reduce(0) { $0 + $1.totalOutputTokens }
+            cacheTokens  = showingTodayStats ? viewModel.agentsData.reduce(0) { $0 + $1.todayCacheReadTokens }
+                                             : viewModel.agentsData.reduce(0) { $0 + $1.totalCacheReadTokens }
+        } else {
+            cost         = showingTodayStats ? data.todayCost         : data.totalCost
+            inputTokens  = showingTodayStats ? data.todayInputTokens  : data.totalInputTokens
+            outputTokens = showingTodayStats ? data.todayOutputTokens : data.totalOutputTokens
+            cacheTokens  = showingTodayStats ? data.todayCacheReadTokens : data.totalCacheReadTokens
+        }
+        let _ = data  // suppress unused warning when hasMultiAgent
         return VStack(spacing: 8) {
             // ── 全部 / 今天 切换 ─────────────────────────────────
             Picker("", selection: $showingTodayStats) {
@@ -161,6 +203,101 @@ struct StatusBarView: View {
                     label: l10n.str(.cacheRead),
                     value: MonitoringViewModel.formatTokens(cacheTokens)
                 )
+            }
+        }
+    }
+
+    // MARK: - Agents 概览 Section
+
+    private var agentsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            SectionHeader(title: "AGENTS", systemImage: "bolt.fill")
+
+            if viewModel.agentsData.isEmpty {
+                Text("正在加载…")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 4)
+            } else {
+                let totalCost = viewModel.agentsData.reduce(0) { $0 + $1.todayCost }
+                ForEach(viewModel.agentsData, id: \.agentKind) { agentData in
+                    AgentRow(
+                        agentData: agentData,
+                        totalCost: max(totalCost, 0.000001),
+                        isExpanded: expandedAgent == agentData.agentKind,
+                        onToggle: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                if expandedAgent == agentData.agentKind {
+                                    expandedAgent = nil
+                                } else {
+                                    expandedAgent = agentData.agentKind
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: - Agent 通用限额 Section
+
+    private func agentRateLimitSection(rateLimit: AgentRateLimitState, agentName: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            SectionHeader(title: "\(agentName) 限额", systemImage: "gauge.medium")
+
+            HStack {
+                Text("\(rateLimit.windowMinutes / 60)h 窗口")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(String(format: "%.1f", rateLimit.usedPercent))%")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(rateLimit.usedPercent > 90 ? .red : (rateLimit.usedPercent > 75 ? .orange : .primary))
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(.separatorColor))
+                        .frame(height: 4)
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(rateLimit.usedPercent > 90 ? Color.red : (rateLimit.usedPercent > 75 ? Color.orange : Color.accentColor))
+                        .frame(width: max(0, geo.size.width * CGFloat(rateLimit.usedPercent / 100)), height: 4)
+                }
+            }
+            .frame(height: 4)
+
+            if let resetsAt = rateLimit.resetsDescription {
+                Text("重置: \(resetsAt)")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+    }
+
+    // MARK: - Agent 专属项目排行 Section
+
+    private func agentProjectSection(projectCosts: [String: Double]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            SectionHeader(title: l10n.str(.projectSectionTitle), systemImage: "folder.fill")
+            let topProjects = projectCosts.sorted { $0.value > $1.value }.prefix(5)
+            let maxCost = topProjects.first?.value ?? 1
+            ForEach(Array(topProjects), id: \.key) { name, cost in
+                ProjectRow(name: name, cost: cost, maxCost: maxCost)
+            }
+        }
+    }
+
+    // MARK: - Agent 专属最近记录 Section
+
+    private func agentRecentSection(entries: [UsageEntry]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            SectionHeader(title: l10n.str(.recentSectionTitle), systemImage: "clock.fill")
+            ForEach(Array(entries.suffix(5).reversed())) { entry in
+                RecentEntryRow(entry: entry)
             }
         }
     }
@@ -534,6 +671,68 @@ private struct RecentEntryRow: View {
 
         // 7. 其他情况：显示完整模型名（最多12字符）
         return String(entry.model.prefix(12))
+    }
+}
+
+// MARK: - 子组件：Agent 行（Agents Section 中的每一行）
+
+private struct AgentRow: View {
+    let agentData: AllAgentData
+    let totalCost: Double      // 所有 Agent 今日成本之和（用于计算占比）
+    let isExpanded: Bool
+    let onToggle: () -> Void
+
+    private var kind: AgentKind { agentData.agentKind }
+    private var isActive: Bool { agentData.todayCost > 0 }
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 8) {
+                // 活跃状态指示圆点
+                Circle()
+                    .fill(isActive ? kind.color : Color.secondary.opacity(0.4))
+                    .frame(width: 7, height: 7)
+
+                // Agent 名称
+                Text(kind.displayName)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                    .frame(minWidth: 80, alignment: .leading)
+
+                // 今日成本
+                Text(MonitoringViewModel.formatCost(agentData.todayCost))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundColor(isActive ? .primary : .secondary)
+                    .frame(width: 52, alignment: .trailing)
+
+                // 进度条
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color(.separatorColor))
+                            .frame(height: 4)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(kind.color.opacity(isActive ? 1.0 : 0.3))
+                            .frame(width: max(0, geo.size.width * CGFloat(agentData.todayCost / totalCost)), height: 4)
+                    }
+                }
+                .frame(height: 4)
+
+                // 展开/折叠指示
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.right")
+                    .imageScale(.small)
+                    .foregroundColor(.secondary)
+                    .frame(width: 14)
+            }
+            .padding(.vertical, 5)
+            .padding(.horizontal, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isExpanded ? Color(.controlBackgroundColor) : Color.clear)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
     }
 }
 

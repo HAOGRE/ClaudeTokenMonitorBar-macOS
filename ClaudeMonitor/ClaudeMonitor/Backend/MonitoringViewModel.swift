@@ -18,7 +18,7 @@ struct MonitoringData {
     var modelDistribution: [String: Int] = [:]
     var recentEntries: [UsageEntry] = []
     var lastUpdated: Date = Date()
-    
+
     // V4 状态协议数据
     var v4State: V4StateProtocol? = nil
 
@@ -45,11 +45,18 @@ private struct LoadResult: Sendable {
     let dailyData: [Date: UsageStatistics]
 }
 
+private struct BackgroundLoadResult: Sendable {
+    let claudeResult: LoadResult
+    let v4State: V4StateProtocol?
+    let codexData: AllAgentData?
+}
+
 // MARK: - 监控视图模型
 
 @Observable
 @MainActor
 final class MonitoringViewModel {
+    // ── 现有 Claude Code 数据（向后兼容）──────────────────────────
     var monitoringData: MonitoringData = .empty
     var tokenRate: TokenRate = TokenRate()
     var isLoading = false
@@ -57,10 +64,63 @@ final class MonitoringViewModel {
     /// 30天每日历史，用于柱状图
     var dailyHistory: [(day: Date, cost: Double, tokens: Int)] = []
 
+    // ── 多 Agent 数据 ─────────────────────────────────────────────
+    /// 所有已安装 Agent 的聚合数据（包含 Claude、Codex、Gemini 等）
+    var agentsData: [AllAgentData] = []
+
+    // ── 聚合计算属性（跨所有 Agent 叠加）─────────────────────────
+
+    /// 聚合实时速率：所有 Agent 的输入/输出速率叠加
+    var aggregatedTokenRate: TokenRate {
+        var inputSum: Double = 0
+        var outputSum: Double = 0
+        for rate in agentRates.values {
+            inputSum  += rate.inputPerSec
+            outputSum += rate.outputPerSec
+        }
+        return TokenRate(inputPerSec: inputSum, outputPerSec: outputSum)
+    }
+
+    /// 所有 Agent 今日总成本
+    var aggregatedTodayCost: Double {
+        agentsData.reduce(0) { $0 + $1.todayCost }
+    }
+
+    /// 所有 Agent 累计总成本
+    var aggregatedTotalCost: Double {
+        agentsData.reduce(0) { $0 + $1.totalCost }
+    }
+
+    /// 所有 Agent 今日输入 token 总数
+    var aggregatedTodayInputTokens: Int {
+        agentsData.reduce(0) { $0 + $1.todayInputTokens }
+    }
+
+    /// 所有 Agent 今日输出 token 总数
+    var aggregatedTodayOutputTokens: Int {
+        agentsData.reduce(0) { $0 + $1.todayOutputTokens }
+    }
+
+    // ── 私有状态 ──────────────────────────────────────────────────
     private let logger = Logger(subsystem: "com.haogre.claudetokenmonitor", category: "viewmodel")
     private let tokenReader = TokenDataReader()
     private let stateReader = StateProtocolReader()
     nonisolated(unsafe) private var autoRefreshTask: Task<Void, Never>?
+
+    /// 每个 Agent 的实时速率（key = agentId）
+    private var agentRates: [AgentKind: TokenRate] = [:]
+
+    /// 每个 Agent 的上次采样数据
+    private struct AgentSample {
+        var input: Int = 0
+        var output: Int = 0
+        var time: Date = Date()
+        var isFirstLoad: Bool = true
+        var inputHistory: [Double] = []
+        var outputHistory: [Double] = []
+    }
+    private var agentSamples: [AgentKind: AgentSample] = [:]
+    private let historySize = 5
 
     /// 重置日期（持久化到 UserDefaults）
     private var resetDate: Date? {
@@ -68,16 +128,13 @@ final class MonitoringViewModel {
         set { UserDefaults.standard.set(newValue, forKey: "statsResetDate") }
     }
 
-    // 上一次采样的数据（用于计算速率）
+    // 保留旧速率字段（供向后兼容 — ClaudeMonitorApp.swift 的 MenuBarLabel 通过 aggregatedTokenRate 读取）
     private var lastSampleInput: Int = 0
     private var lastSampleOutput: Int = 0
     private var lastSampleTime: Date = Date()
     private var isFirstLoad = true
-
-    // 速率平滑：保留最近 N 个采样做滑动平均
     private var inputHistory: [Double] = []
     private var outputHistory: [Double] = []
-    private let historySize = 5
 
     init() {
         startAutoRefresh()
@@ -99,17 +156,61 @@ final class MonitoringViewModel {
         let reader = tokenReader
         let stateR = stateReader
         let capturedResetDate = resetDate
-        let (result, state) = await Task.detached(priority: .userInitiated) {
+
+        // 并发读取：Claude（现有逻辑）+ 其他 Agent
+        let bgResult: BackgroundLoadResult = await Task.detached(priority: .userInitiated) {
+            // Claude Code 数据（原有路径）
             let v4State = await stateR.readState()
-            let allData = reader.loadAllData(since: capturedResetDate, daysBack: 30)
+            let allData = reader.loadRawAllData(since: capturedResetDate, daysBack: 30)
             let stats      = UsageStatistics(entries: allData.allEntries)
             let todayStats = UsageStatistics(entries: allData.todayEntries)
             let projects   = allData.projectEntries.mapValues { UsageStatistics(entries: $0) }
             let dailyData  = allData.dailyEntries.mapValues  { UsageStatistics(entries: $0) }
-            return (LoadResult(stats: stats, todayStats: todayStats, projects: projects, dailyData: dailyData), v4State)
+            let claudeResult = LoadResult(stats: stats, todayStats: todayStats, projects: projects, dailyData: dailyData)
+
+            // Codex 数据（新增）
+            let codexReader = CodexLogReader()
+            let codexAgentData: AllAgentData? = codexReader.isInstalled
+                ? codexReader.loadAllData(since: capturedResetDate, daysBack: 30)
+                : nil
+
+            return BackgroundLoadResult(claudeResult: claudeResult, v4State: v4State, codexData: codexAgentData)
         }.value
 
-        updateMonitoringData(from: result.stats, todayStats: result.todayStats, projectData: result.projects, dailyData: result.dailyData, v4State: state)
+        let result   = bgResult.claudeResult
+        let state    = bgResult.v4State
+        let codexData = bgResult.codexData
+
+        // 更新现有 monitoringData（Claude 专用，向后兼容）
+        updateMonitoringData(
+            from: result.stats,
+            todayStats: result.todayStats,
+            projectData: result.projects,
+            dailyData: result.dailyData,
+            v4State: state
+        )
+
+        // 构建 Claude 的 AllAgentData（含 v4 限额状态）
+        let claudeAgentData = buildClaudeAgentData(
+            from: result.stats,
+            todayStats: result.todayStats,
+            projectData: result.projects,
+            dailyData: result.dailyData,
+            v4State: state
+        )
+
+        // 更新聚合 agents 列表
+        var newAgents: [AllAgentData] = [claudeAgentData]
+        if let codex = codexData {
+            newAgents.append(codex)
+        }
+        agentsData = newAgents
+
+        // 更新每个 Agent 的实时速率
+        updateAgentRate(for: .claude, input: result.stats.totalInputTokens, output: result.stats.totalOutputTokens)
+        if let codex = codexData {
+            updateAgentRate(for: .codex, input: codex.totalInputTokens, output: codex.totalOutputTokens)
+        }
 
         if result.stats.entries.isEmpty && state == nil {
             errorMessage = "未找到数据，请检查本地用量数据目录访问权限"
@@ -117,6 +218,81 @@ final class MonitoringViewModel {
 
         isLoading = false
     }
+
+    // MARK: - 构建 Claude AllAgentData
+
+    private func buildClaudeAgentData(
+        from stats: UsageStatistics,
+        todayStats: UsageStatistics,
+        projectData: [String: UsageStatistics],
+        dailyData: [Date: UsageStatistics],
+        v4State: V4StateProtocol?
+    ) -> AllAgentData {
+        let projectCosts = projectData.mapValues { $0.totalCost }
+        let daily = dailyData
+            .sorted { $0.key < $1.key }
+            .map { (day: $0.key, cost: $0.value.totalCost,
+                    tokens: $0.value.entries.reduce(0) { $0 + $1.inputTokens + $1.outputTokens }) }
+        let rateLimitState: AgentRateLimitState? = v4State.flatMap { AgentRateLimitState.from(v4State: $0) }
+
+        // 若 v4 state 提供了更权威的总成本，优先使用
+        var totalCost = stats.totalCost
+        if let s = v4State, let history = s.local_history, let tCost = history.total_cost_usd, tCost > 0 {
+            totalCost = tCost
+        }
+
+        return AllAgentData(
+            agentKind: .claude,
+            totalCost: totalCost,
+            totalInputTokens: stats.totalInputTokens,
+            totalOutputTokens: stats.totalOutputTokens,
+            totalCacheReadTokens: stats.totalCacheReadTokens,
+            todayCost: todayStats.totalCost,
+            todayInputTokens: todayStats.totalInputTokens,
+            todayOutputTokens: todayStats.totalOutputTokens,
+            todayCacheReadTokens: todayStats.totalCacheReadTokens,
+            recentEntries: Array(stats.entries.suffix(5)),
+            projectCosts: projectCosts,
+            dailyHistory: daily,
+            rateLimitState: rateLimitState
+        )
+    }
+
+    // MARK: - 每个 Agent 的速率更新
+
+    private func updateAgentRate(for kind: AgentKind, input: Int, output: Int) {
+        let now = Date()
+        var sample = agentSamples[kind] ?? AgentSample()
+
+        if !sample.isFirstLoad {
+            let elapsed = now.timeIntervalSince(sample.time)
+            if elapsed > 0 {
+                let rawInputRate  = Double(max(0, input  - sample.input))  / elapsed
+                let rawOutputRate = Double(max(0, output - sample.output)) / elapsed
+
+                sample.inputHistory.append(rawInputRate)
+                sample.outputHistory.append(rawOutputRate)
+                if sample.inputHistory.count  > historySize { sample.inputHistory.removeFirst() }
+                if sample.outputHistory.count > historySize { sample.outputHistory.removeFirst() }
+
+                let iCount = Double(sample.inputHistory.count)
+                let oCount = Double(sample.outputHistory.count)
+                agentRates[kind] = TokenRate(
+                    inputPerSec:  iCount > 0 ? sample.inputHistory.reduce(0, +)  / iCount : 0,
+                    outputPerSec: oCount > 0 ? sample.outputHistory.reduce(0, +) / oCount : 0
+                )
+            }
+        } else {
+            sample.isFirstLoad = false
+        }
+
+        sample.input  = input
+        sample.output = output
+        sample.time   = now
+        agentSamples[kind] = sample
+    }
+
+    // MARK: - 现有 monitoringData 更新（保持 Claude 专用路径，向后兼容）
 
     private func updateMonitoringData(from stats: UsageStatistics, todayStats: UsageStatistics, projectData: [String: UsageStatistics], dailyData: [Date: UsageStatistics], v4State: V4StateProtocol?) {
         let now = Date()
@@ -197,6 +373,8 @@ final class MonitoringViewModel {
     func restartAutoRefresh() {
         inputHistory = []
         outputHistory = []
+        agentRates = [:]
+        agentSamples = [:]
         startAutoRefresh()
     }
 
@@ -220,6 +398,9 @@ final class MonitoringViewModel {
         UserDefaults.standard.set(Date(), forKey: "statsResetDate")
         dailyHistory = []
         monitoringData = .empty
+        agentsData = []
+        agentRates = [:]
+        agentSamples = [:]
         inputHistory = []
         outputHistory = []
         lastSampleInput = 0
@@ -264,4 +445,3 @@ final class MonitoringViewModel {
         }
     }
 }
-
