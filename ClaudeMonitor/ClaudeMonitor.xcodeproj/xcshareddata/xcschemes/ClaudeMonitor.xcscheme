@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "25CF94592F8508E400C06791"
-               BuildableName = "AITokenMonitor.app"
+               BuildableName = "ClaudeTokenMonitor.app"
                BlueprintName = "ClaudeMonitor"
                ReferencedContainer = "container:ClaudeMonitor.xcodeproj">
             </BuildableReference>
@@ -57,7 +57,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "25CF94592F8508E400C06791"
-            BuildableName = "AITokenMonitor.app"
+            BuildableName = "ClaudeTokenMonitor.app"
             BlueprintName = "ClaudeMonitor"
             ReferencedContainer = "container:ClaudeMonitor.xcodeproj">
          </BuildableReference>
@@ -74,7 +74,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "25CF94592F8508E400C06791"
-            BuildableName = "AITokenMonitor.app"
+            BuildableName = "ClaudeTokenMonitor.app"
             BlueprintName = "ClaudeMonitor"
             ReferencedContainer = "container:ClaudeMonitor.xcodeproj">
          </BuildableReference>
