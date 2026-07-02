@@ -18,6 +18,12 @@ struct StateProtocolReaderTests {
               "tokens_used": 7550,
               "token_limit": 10000,
               "resets_at": "in 2 hours"
+            },
+            "seven_day": {
+              "used_percentage": 42.0,
+              "tokens_used": 420000,
+              "token_limit": 1000000,
+              "resets_at": "in 3 days"
             }
           },
           "local": {
@@ -50,7 +56,10 @@ struct StateProtocolReaderTests {
         #expect(state?.limits?.five_hour?.tokens_used == 7550)
         #expect(state?.limits?.five_hour?.token_limit == 10000)
         #expect(state?.limits?.five_hour?.resets_at == "in 2 hours")
-        
+
+        #expect(state?.limits?.seven_day?.used_percentage == 42.0)
+        #expect(state?.limits?.seven_day?.token_limit == 1000000)
+
         #expect(state?.local?.is_active == true)
         #expect(state?.local?.cost_usd == 12.34)
         

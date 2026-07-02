@@ -45,6 +45,7 @@ private struct MenuBarLabel: View {
         let rate1 = MonitoringViewModel.formatRate(rate.inputPerSec)
         let rate2 = MonitoringViewModel.formatRate(rate.outputPerSec)
         Image(nsImage: makeMenuBarImage(rate1: rate1, rate2: rate2))
+            .accessibilityLabel("↑\(rate1.value) \(rate1.unit) ↓\(rate2.value) \(rate2.unit)")
     }
 }
 
@@ -93,40 +94,45 @@ private func makeCostImage(cost: String) -> NSImage {
 //
 //   箭头左对齐，数字右对齐，两行间距极紧凑（参考 iStats）
 
-private func makeMenuBarImage(rate1: String, rate2: String) -> NSImage {
-    let key = "\(rate1)|\(rate2)"
+private func makeMenuBarImage(rate1: (value: String, unit: String), rate2: (value: String, unit: String)) -> NSImage {
+    let key = "\(rate1.value)|\(rate1.unit)|\(rate2.value)|\(rate2.unit)"
     if key == ImageCache.rateKey, let cached = ImageCache.rateImage { return cached }
 
     let H: CGFloat    = 22   // 状态栏固定高度
     let minW: CGFloat = 58   // 固定最小宽度，避免速率为 0 时图标过窄
 
-    // 数字：等宽、medium 字重
-    let numFont   = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
-    // 箭头：同字号，保持视觉统一
-    let arrowFont = NSFont.systemFont(ofSize: 10, weight: .medium)
+    // 数字：SF Mono 9pt medium（加粗版）
+    let numFont   = NSFont(name: "SFMono-Medium", size: 9) ?? NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .medium)
+    // 箭头：同字号，medium 字重
+    let arrowFont = NSFont.systemFont(ofSize: 9, weight: .medium)
 
     let arrowAttrs: [NSAttributedString.Key: Any] = [
         .font: arrowFont,
-        .foregroundColor: NSColor.labelColor
+        .foregroundColor: NSColor.textColor
     ]
     let numAttrs: [NSAttributedString.Key: Any] = [
         .font: numFont,
-        .foregroundColor: NSColor.labelColor
+        .foregroundColor: NSColor.textColor
     ]
 
     let arrow1 = "↗" as NSString
     let arrow2 = "↙" as NSString
 
     let a1Size = arrow1.size(withAttributes: arrowAttrs)
-    let r1Size = (rate1 as NSString).size(withAttributes: numAttrs)
-    let r2Size = (rate2 as NSString).size(withAttributes: numAttrs)
+    let v1Size = (rate1.value as NSString).size(withAttributes: numAttrs)
+    let v2Size = (rate2.value as NSString).size(withAttributes: numAttrs)
+    let u1Size = (rate1.unit as NSString).size(withAttributes: numAttrs)
+    let u2Size = (rate2.unit as NSString).size(withAttributes: numAttrs)
 
     // glyphH：控制箭头行间距（用户调好的值，保持不动）
     let glyphH    = ceil(numFont.capHeight - 3)
     // textLineH：数字的实际渲染行高，用于定位数字 Y 坐标（保证不截断）
-    let textLineH = ceil(r1Size.height - 2)
+    let textLineH = ceil(v1Size.height - 2)
     let arrowW = ceil(a1Size.width)
-    let textW  = ceil(max(r1Size.width, r2Size.width))
+    // 三列布局：数字列右对齐 + 单位列右对齐（Kt/s 与 t/s 的 t/s 上下对齐）
+    let valueW = ceil(max(v1Size.width, v2Size.width))
+    let unitW  = ceil(max(u1Size.width, u2Size.width))
+    let colGap: CGFloat = 3   // 数字列与单位列间距
 
     let rowGap: CGFloat = 1
     // 箭头两行总高（决定箭头垂直位置）
@@ -135,7 +141,9 @@ private func makeMenuBarImage(rate1: String, rate2: String) -> NSImage {
     let textTotalH  = textLineH * 2 + rowGap
 
     // 图像总宽：不低于 minW
-    let W = max(minW, arrowW + 2 + textW)
+    let W = max(minW, arrowW + 2 + valueW + colGap + unitW)
+    // 数字列右缘（单位列右缘即 W）
+    let valueRight = W - unitW - colGap
 
     // 箭头块、数字块各自独立垂直居中，互不影响
     let arrowStartY = floor((H - arrowTotalH) / 2)
@@ -145,9 +153,12 @@ private func makeMenuBarImage(rate1: String, rate2: String) -> NSImage {
         // ── 行 1：↗ 输入速率 ──────────────────────────────────
         let arrowOff = floor((glyphH - a1Size.height) / 2)
         arrow1.draw(at: NSPoint(x: 0, y: arrowStartY + arrowOff), withAttributes: arrowAttrs)
-        // 数字：右对齐，Y 坐标基于 textStartY（完整显示，不截断）
-        (rate1 as NSString).draw(
-            at: NSPoint(x: W - r1Size.width, y: textStartY),
+        (rate1.value as NSString).draw(
+            at: NSPoint(x: valueRight - v1Size.width, y: textStartY),
+            withAttributes: numAttrs
+        )
+        (rate1.unit as NSString).draw(
+            at: NSPoint(x: W - u1Size.width, y: textStartY),
             withAttributes: numAttrs
         )
 
@@ -155,8 +166,12 @@ private func makeMenuBarImage(rate1: String, rate2: String) -> NSImage {
         let arrowRow2Y = arrowStartY + glyphH + rowGap
         let textRow2Y  = textStartY  + textLineH + rowGap
         arrow2.draw(at: NSPoint(x: 0, y: arrowRow2Y + arrowOff), withAttributes: arrowAttrs)
-        (rate2 as NSString).draw(
-            at: NSPoint(x: W - r2Size.width, y: textRow2Y),
+        (rate2.value as NSString).draw(
+            at: NSPoint(x: valueRight - v2Size.width, y: textRow2Y),
+            withAttributes: numAttrs
+        )
+        (rate2.unit as NSString).draw(
+            at: NSPoint(x: W - u2Size.width, y: textRow2Y),
             withAttributes: numAttrs
         )
 

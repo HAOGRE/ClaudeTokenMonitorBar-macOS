@@ -8,7 +8,6 @@ import SwiftUI
 struct Metrics {
     var totalTokens: Int = 0
     var inputTokens: Int = 0
-    var cacheTokens: Int = 0
     var outputTokens: Int = 0
     var cost: Double = 0
     var mcpCalls: Int = 0
@@ -16,7 +15,6 @@ struct Metrics {
     var requests: Int = 0
     var sessions: Int = 0
     var deltaTokens: Double = 0 // pct
-    var deltaCost: Double = 0 // pct
     var servers: Int = 0
     var skills: Int = 0
 }
@@ -24,11 +22,8 @@ struct Metrics {
 struct ModelStat: Identifiable {
     var id: String { name }
     var name: String
-    var vendor: String = "Anthropic"
     var tokens: Int = 0
     var cost: Double = 0
-    var color: Color = .green
-    var priced: Bool = true
 }
 
 struct NamedCount: Identifiable {
@@ -82,7 +77,8 @@ struct MonitoringData {
     var lastUpdated: Date = Date()
     var v4State: V4StateProtocol? = nil
     var recentEntries: [UsageEntry] = []
-    
+    var isV4StateEstimated: Bool = false  // true = 本地估算，false = 官方数据
+
     static var empty: MonitoringData { MonitoringData() }
 }
 
@@ -112,6 +108,7 @@ private struct LoadResult: Sendable {
 final class MonitoringViewModel {
     var monitoringData: MonitoringData = .empty
     var tokenRate: TokenRate = TokenRate()
+    var burnRatePerMin: Double = 0 // 最近 60 分钟窗口燃烧率 (tokens/min)
     var isLoading = false
     var errorMessage: String?
     
@@ -210,6 +207,13 @@ final class MonitoringViewModel {
         lastSampleOutput = totalOutput
         lastSampleTime = now
 
+        // 燃烧率：最近 60 分钟 token 总量 / 60（同 Claude-Code-Usage-Monitor 算法）
+        let hourAgo = now.addingTimeInterval(-3600)
+        let recentTokens = result.allEntries
+            .filter { $0.timestamp >= hourAgo }
+            .reduce(0) { $0 + totalTokens(in: $1) }
+        burnRatePerMin = Double(recentTokens) / 60.0
+
         // 构建 Dashboard
         var dashboard = Dashboard()
         let dayRange = periodRange(for: .day, now: now, calendar: calendar)
@@ -272,12 +276,24 @@ final class MonitoringViewModel {
         }
         dashboard.heatmap = heatmap
         
+        // Fallback: 当没有官方 state 数据时，使用本地估算
+        let effectiveV4State: V4StateProtocol?
+        let isEstimated: Bool
+        if let v4State = v4State {
+            effectiveV4State = v4State
+            isEstimated = false
+        } else {
+            effectiveV4State = calculateLocalRateLimits(from: result.allEntries, now: now)
+            isEstimated = effectiveV4State != nil
+        }
+
         var updated = MonitoringData()
         updated.dashboard = dashboard
         updated.lastUpdated = now
-        updated.v4State = v4State
+        updated.v4State = effectiveV4State
+        updated.isV4StateEstimated = isEstimated
         updated.recentEntries = Array(result.allEntries.suffix(5))
-        
+
         monitoringData = updated
     }
     
@@ -326,7 +342,6 @@ final class MonitoringViewModel {
         var metrics = Metrics()
         metrics.totalTokens = totalTokens(in: entries)
         metrics.inputTokens = entries.reduce(0) { $0 + $1.inputTokens }
-        metrics.cacheTokens = entries.reduce(0) { $0 + $1.cacheReadTokens + $1.cacheCreationTokens }
         metrics.outputTokens = entries.reduce(0) { $0 + $1.outputTokens }
         metrics.cost = entries.reduce(0) { $0 + $1.costUsd }
         metrics.mcpCalls = entries.reduce(0) { $0 + $1.mcpServers.count }
@@ -334,13 +349,11 @@ final class MonitoringViewModel {
         metrics.requests = entries.filter { !$0.model.isEmpty }.count
         metrics.sessions = Set(entries.map(\.sessionId).filter { !$0.isEmpty }).count
         metrics.deltaTokens = pctDelta(current: Double(metrics.totalTokens), previous: Double(totalTokens(in: previousEntries)))
-        metrics.deltaCost = pctDelta(current: metrics.cost, previous: previousEntries.reduce(0) { $0 + $1.costUsd })
         metrics.servers = installedMcpServers
         metrics.skills = installedSkills
         report.metrics = metrics
         
         // 聚合模型
-        let donutPalette: [Color] = [.green, .mint, .teal, .cyan, .blue, .indigo, .purple]
         var modelDict: [String: (tokens: Int, cost: Double)] = [:]
         for entry in entries {
             guard !entry.model.isEmpty else { continue }
@@ -348,11 +361,8 @@ final class MonitoringViewModel {
             let cur = modelDict[m] ?? (0, 0.0)
             modelDict[m] = (cur.tokens + totalTokens(in: entry), cur.cost + entry.costUsd)
         }
-        var models = modelDict.map { k, v in ModelStat(name: k, tokens: v.tokens, cost: v.cost, color: .gray) }
+        var models = modelDict.map { k, v in ModelStat(name: k, tokens: v.tokens, cost: v.cost) }
         models.sort { $0.tokens > $1.tokens }
-        for i in 0..<models.count {
-            models[i].color = i < donutPalette.count ? donutPalette[i] : .gray
-        }
         report.models = models
 
         report.mcp = namedCounts(from: entries.flatMap(\.mcpServers))
@@ -488,6 +498,7 @@ final class MonitoringViewModel {
         lastSampleInput = 0
         lastSampleOutput = 0
         lastSampleTime = Date()
+        burnRatePerMin = 0
         isFirstLoad = true
         refreshData()
     }
@@ -507,18 +518,110 @@ final class MonitoringViewModel {
         return String(count)
     }
 
-    static func formatRate(_ tokensPerSec: Double) -> String {
+    // iStats 风格：量级并入单位（t/s、Kt/s、Mt/s），数值不超过 3 位有效数字
+    static func formatRate(_ tokensPerSec: Double) -> (value: String, unit: String) {
+        func scaled(_ v: Double) -> String {
+            String(format: v < 100 ? "%.1f" : "%.0f", v)
+        }
         switch tokensPerSec {
         case ..<0.1:
-            return "0 T/s"
+            return ("0", "T/s")
         case ..<1_000:
-            return String(format: "%.0f t/s", tokensPerSec)
+            return (String(format: "%.0f", tokensPerSec), "T/s")
         case ..<1_000_000:
-            return String(format: "%.1fK t/s", tokensPerSec / 1_000)
+            return (scaled(tokensPerSec / 1_000), "KT/s")
         case ..<1_000_000_000:
-            return String(format: "%.1fM t/s", tokensPerSec / 1_000_000)
+            return (scaled(tokensPerSec / 1_000_000), "MT/s")
         default:
-            return String(format: "%.1fG t/s", tokensPerSec / 1_000_000_000)
+            return (scaled(tokensPerSec / 1_000_000_000), "GT/s")
+        }
+    }
+
+    // MARK: - 本地限额估算（当没有 claude-code-usage-monitor 时的兜底方案）
+
+    /// 基于本地 JSONL 数据计算限额估算
+    /// 返回 V4StateProtocol 结构，与官方数据格式一致，方便 UI 统一处理
+    private func calculateLocalRateLimits(from entries: [UsageEntry], now: Date) -> V4StateProtocol? {
+        guard !entries.isEmpty else { return nil }
+
+        let fiveHourAgo = now.addingTimeInterval(-5 * 3600)
+        let sevenDayAgo = now.addingTimeInterval(-7 * 24 * 3600)
+
+        // 计算最近 5 小时用量
+        let fiveHourTokens = entries
+            .filter { $0.timestamp >= fiveHourAgo }
+            .reduce(0) { $0 + totalTokens(in: $1) }
+
+        // 计算最近 7 天用量
+        let sevenDayTokens = entries
+            .filter { $0.timestamp >= sevenDayAgo }
+            .reduce(0) { $0 + totalTokens(in: $1) }
+
+        // ponytail: 使用固定默认限额；历史 P90 估算会增加复杂度且不一定更准确
+        let fiveHourLimit = 100_000
+        let sevenDayLimit = 1_000_000
+
+        let calendar = Calendar.current
+
+        // 5 小时窗口重置时间：按滑动窗口，即当前时间 + (5小时 - 已过去的时间)
+        let fiveHourReset: Date
+        if let oldestEntry = entries.filter({ $0.timestamp >= fiveHourAgo }).min(by: { $0.timestamp < $1.timestamp }) {
+            fiveHourReset = oldestEntry.timestamp.addingTimeInterval(5 * 3600)
+        } else {
+            fiveHourReset = now.addingTimeInterval(5 * 3600)
+        }
+
+        // 7 天窗口重置时间：按下周一 00:00 本地时间
+        let weekday = calendar.component(.weekday, from: now)
+        let daysToMonday = (weekday + 5) % 7
+        var components = calendar.dateComponents([.year, .month, .day], from: now)
+        components.day! += (7 - daysToMonday)
+        let sevenDayReset = calendar.date(from: components) ?? now.addingTimeInterval(7 * 24 * 3600)
+
+        // 计算相对时间字符串
+        let fiveHourResetStr = formatRelativeTime(from: now, to: fiveHourReset)
+        let sevenDayResetStr = formatRelativeTime(from: now, to: sevenDayReset)
+
+        let fiveHourDetail = V4LimitDetail(
+            used_percentage: min(100.0, Double(fiveHourTokens) / Double(fiveHourLimit) * 100),
+            tokens_used: fiveHourTokens,
+            token_limit: fiveHourLimit,
+            resets_at: fiveHourResetStr
+        )
+
+        let sevenDayDetail = V4LimitDetail(
+            used_percentage: min(100.0, Double(sevenDayTokens) / Double(sevenDayLimit) * 100),
+            tokens_used: sevenDayTokens,
+            token_limit: sevenDayLimit,
+            resets_at: sevenDayResetStr
+        )
+
+        return V4StateProtocol(
+            schema_version: "1.0-local",
+            generated_at: ISO8601DateFormatter().string(from: now),
+            confidence: "local_estimate",
+            stale: false,
+            plan: "custom",
+            limits: V4Limits(five_hour: fiveHourDetail, seven_day: sevenDayDetail),
+            local: nil,
+            local_history: nil
+        )
+    }
+
+    /// 格式化为相对时间字符串（如 "in 2h 15m"）
+    private func formatRelativeTime(from: Date, to: Date) -> String {
+        let interval = to.timeIntervalSince(from)
+        guard interval > 0 else { return "now" }
+
+        let hours = Int(interval) / 3600
+        let minutes = (Int(interval) % 3600) / 60
+
+        if hours > 0 && minutes > 0 {
+            return "in \(hours)h \(minutes)m"
+        } else if hours > 0 {
+            return "in \(hours)h"
+        } else {
+            return "in \(minutes)m"
         }
     }
 }

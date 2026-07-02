@@ -3,6 +3,8 @@ import SwiftUI
 struct SettingsView: View {
     var onDismiss: () -> Void = {}
     @Environment(MonitoringViewModel.self) private var viewModel
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: Theme { Theme(isDark: colorScheme == .dark) }
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
 
@@ -11,15 +13,16 @@ struct SettingsView: View {
             // ── 标题栏 ──────────────────────────────────────────
             HStack {
                 Image(systemName: "gearshape.fill")
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(theme.primaryGreen)
                 Text(l10n.str(.settingsTitle))
                     .font(.headline)
+                    .foregroundColor(theme.textMain)
                 Spacer()
                 Button {
                     onDismiss()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(theme.textSecondary)
                         .imageScale(.medium)
                 }
                 .buttonStyle(.borderless)
@@ -37,7 +40,6 @@ struct SettingsView: View {
 
                 SettingsToggleRow(
                     icon: "power",
-                    iconColor: .green,
                     title: l10n.str(.launchAtLoginTitle),
                     subtitle: l10n.str(.launchAtLoginSubtitle),
                     isOn: Binding(
@@ -48,7 +50,6 @@ struct SettingsView: View {
 
                 SettingsToggleRow(
                     icon: "dock.rectangle",
-                    iconColor: .indigo,
                     title: l10n.str(.showDockIconTitle),
                     subtitle: l10n.str(.showDockIconSubtitle),
                     isOn: Binding(
@@ -75,7 +76,6 @@ struct SettingsView: View {
 
                 SettingsToggleRow(
                     icon: "folder.fill",
-                    iconColor: .blue,
                     title: l10n.str(.topProjectsTitle),
                     subtitle: l10n.str(.topProjectsSubtitle),
                     isOn: Binding(
@@ -86,7 +86,6 @@ struct SettingsView: View {
 
                 SettingsToggleRow(
                     icon: "clock.fill",
-                    iconColor: .orange,
                     title: l10n.str(.recentRecordsTitle),
                     subtitle: l10n.str(.recentRecordsSubtitle),
                     isOn: Binding(
@@ -100,14 +99,14 @@ struct SettingsView: View {
             Spacer(minLength: 0)
         }
         .frame(width: 340)
-        .background(Color(.windowBackgroundColor))
+        .background(theme.panelBg)
     }
 
     private func settingsSectionHeader(title: String, icon: String) -> some View {
         Label(title, systemImage: icon)
             .font(.caption)
             .fontWeight(.semibold)
-            .foregroundColor(.secondary)
+            .foregroundColor(theme.textSecondary)
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -117,20 +116,23 @@ struct SettingsView: View {
 
 private struct RefreshIntervalRow: View {
     @Binding var interval: Int
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: Theme { Theme(isDark: colorScheme == .dark) }
 
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "arrow.clockwise.circle.fill")
-                .foregroundColor(.cyan)
+                .foregroundColor(theme.primaryGreen)
                 .imageScale(.medium)
                 .frame(width: 22)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(L10n.shared.str(.refreshIntervalTitle))
                     .font(.callout)
+                    .foregroundColor(theme.textMain)
                 Text(L10n.shared.str(.refreshIntervalSubtitle))
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.textSecondary)
             }
 
             Spacer()
@@ -152,24 +154,26 @@ private struct RefreshIntervalRow: View {
 
 private struct SettingsToggleRow: View {
     let icon: String
-    let iconColor: Color
     let title: String
     let subtitle: String
     @Binding var isOn: Bool
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: Theme { Theme(isDark: colorScheme == .dark) }
 
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .foregroundColor(iconColor)
+                .foregroundColor(theme.primaryGreen)
                 .imageScale(.medium)
                 .frame(width: 22)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .font(.callout)
+                    .foregroundColor(theme.textMain)
                 Text(subtitle)
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(theme.textSecondary)
             }
 
             Spacer()

@@ -12,10 +12,23 @@ struct V4StateProtocol: Codable, Sendable {
     let limits: V4Limits?
     let local: V4Local?
     let local_history: V4LocalHistory?
+
+    // 便捷构造方法，用于本地估算
+    init(schema_version: String?, generated_at: String?, confidence: String?, stale: Bool?, plan: String?, limits: V4Limits?, local: V4Local?, local_history: V4LocalHistory?) {
+        self.schema_version = schema_version
+        self.generated_at = generated_at
+        self.confidence = confidence
+        self.stale = stale
+        self.plan = plan
+        self.limits = limits
+        self.local = local
+        self.local_history = local_history
+    }
 }
 
 struct V4Limits: Codable, Sendable {
     let five_hour: V4LimitDetail?
+    let seven_day: V4LimitDetail?
 }
 
 struct V4LimitDetail: Codable, Sendable {

@@ -45,20 +45,21 @@ struct Theme {
         return Color(nsColor: isDark ? dark : light)
     }
 
-    var bg: Color { dynamic(light: "#e8efeb", dark: "#111315") }
-    var panelBg: Color { dynamic(light: "#fcfdfc", dark: "#202226") }
+    var panelBg: Color { dynamic(light: "#fcfdfc", dark: "#1c1e22") }
     var softCardBg: Color { dynamic(light: "#eef1ef", dark: "#2a2d31") }
-    var panelBorder: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.06), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.08)) }
+    var panelBorder: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.06), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.12)) }
 
     var primaryGreen: Color { dynamic(light: "#4b9665", dark: "#70b687") }
     var chartGreen: Color { dynamic(light: "#3f8758", dark: "#63a978") }
     var lightGreen: Color { dynamic(light: "#a7dbc0", dark: "#8ed8ab") }
+    var warning: Color { dynamic(light: "#b07a28", dark: "#e0a34e") }
+    var danger: Color { dynamic(light: "#bf5a4a", dark: "#e57a68") }
 
     var textMain: Color { dynamic(light: NSColor(red: 34/255, green: 38/255, blue: 36/255, alpha: 0.94), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.88)) }
-    var textSecondary: Color { dynamic(light: NSColor(red: 34/255, green: 38/255, blue: 36/255, alpha: 0.48), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.48)) }
-    var textTertiary: Color { dynamic(light: NSColor(red: 34/255, green: 38/255, blue: 36/255, alpha: 0.30), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.28)) }
-    var separator: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.055), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.06)) }
-    var track: Color { dynamic(light: "#ecf0ed", dark: "#2d3034") }
+    var textSecondary: Color { dynamic(light: NSColor(red: 34/255, green: 38/255, blue: 36/255, alpha: 0.48), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.55)) }
+    var textTertiary: Color { dynamic(light: NSColor(red: 34/255, green: 38/255, blue: 36/255, alpha: 0.38), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.40)) }
+    var separator: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.055), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.09)) }
+    var track: Color { dynamic(light: "#ecf0ed", dark: "#33363b") }
 
     var segBg: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.055), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.065)) }
     var segBorder: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.055), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.08)) }
@@ -504,65 +505,130 @@ struct StatusBarView: View {
                 )
             }
 
-            if let v4 = viewModel.monitoringData.v4State?.limits?.five_hour {
-                v4RateLimitsSection(fiveHour: v4)
+            if let limits = viewModel.monitoringData.v4State?.limits, let fiveHour = limits.five_hour {
+                v4RateLimitsSection(
+                    fiveHour: fiveHour,
+                    sevenDay: limits.seven_day,
+                    isEstimated: viewModel.monitoringData.isV4StateEstimated
+                )
             }
         }
     }
 
-    private func v4RateLimitsSection(fiveHour: V4LimitDetail) -> some View {
-        let used = fiveHour.tokens_used ?? 0
-        let limit = max(fiveHour.token_limit ?? 1, 1)
-        let percentage = fiveHour.used_percentage ?? (Double(used) / Double(limit) * 100)
-        
-        return VStack(spacing: 12) {
+    private func v4RateLimitsSection(fiveHour: V4LimitDetail, sevenDay: V4LimitDetail?, isEstimated: Bool) -> some View {
+        VStack(spacing: 12) {
             HStack {
-                Image(systemName: "shield.checkerboard")
+                Image(systemName: isEstimated ? "exclamationmark.triangle" : "shield.checkerboard")
                     .font(.system(size: 14))
-                    .foregroundColor(theme.textSecondary)
-                Text("OFFICIAL RATE LIMITS (V4)")
+                    .foregroundColor(isEstimated ? theme.warning : theme.textSecondary)
+                Text(isEstimated ? l10n.str(.v4SectionTitleEstimated) : l10n.str(.v4SectionTitle))
                     .sectionTitleFont()
                     .foregroundColor(theme.textSecondary)
                 Spacer()
             }
-            
-            VStack(spacing: 8) {
-                HStack {
-                    Text("5-Hour Window")
-                        .font(.system(size: 12))
-                        .foregroundColor(theme.textSecondary)
-                    Spacer()
-                    Text("\(String(format: "%.1f", percentage))%")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(percentage > 90 ? .red : (percentage > 75 ? .orange : theme.textMain))
-                }
-                
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(theme.separator)
-                            .frame(height: 6)
-                        
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(percentage > 90 ? Color.red : (percentage > 75 ? Color.orange : Color.blue))
-                            .frame(width: max(0, geo.size.width * CGFloat(percentage / 100)), height: 6)
-                    }
-                }
-                .frame(height: 6)
-                
-                if let resetsAt = fiveHour.resets_at {
-                    HStack {
-                        Spacer()
-                        Text("Resets at \(resetsAt)")
-                            .font(.system(size: 11))
-                            .foregroundColor(theme.textSecondary)
-                    }
-                }
+
+            limitRow(title: l10n.str(.v4FiveHourWindow), detail: fiveHour)
+            if let sevenDay {
+                limitRow(title: l10n.str(.v4SevenDayWindow), detail: sevenDay)
+            }
+            burnRateFooter(fiveHour: fiveHour)
+
+            if isEstimated {
+                Text(l10n.str(.v4EstimatedDisclaimer))
+                    .font(.system(size: 10))
+                    .foregroundColor(theme.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
             }
         }
         .padding(12)
         .background(theme.softCardBg)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func limitRow(title: String, detail: V4LimitDetail) -> some View {
+        let used = detail.tokens_used ?? 0
+        let limit = max(detail.token_limit ?? 1, 1)
+        let percentage = detail.used_percentage ?? (Double(used) / Double(limit) * 100)
+
+        return VStack(spacing: 8) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.textSecondary)
+                Spacer()
+                Text("\(String(format: "%.1f", percentage))%")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundColor(percentage > 90 ? theme.danger : (percentage > 75 ? theme.warning : theme.textMain))
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(theme.separator)
+                        .frame(height: 6)
+
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(percentage > 90 ? theme.danger : (percentage > 75 ? theme.warning : theme.primaryGreen))
+                        .frame(width: max(0, geo.size.width * CGFloat(percentage / 100)), height: 6)
+                }
+            }
+            .frame(height: 6)
+
+            if let resetsAt = detail.resets_at {
+                HStack {
+                    Spacer()
+                    Text("\(l10n.str(.v4ResetsAt)) \(resetsAt)")
+                        .font(.system(size: 11))
+                        .foregroundColor(theme.textSecondary)
+                }
+            }
+        }
+    }
+
+    private func burnRateFooter(fiveHour: V4LimitDetail) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "flame")
+                .font(.system(size: 10))
+                .foregroundColor(theme.textSecondary)
+            Text("\(MonitoringViewModel.formatTokens(Int(viewModel.burnRatePerMin))) tok/min")
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(theme.textSecondary)
+            Spacer()
+            if let prediction = predictionText(fiveHour: fiveHour) {
+                Text(prediction)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(prediction == l10n.str(.v4NoHitBeforeReset) ? theme.textSecondary : theme.warning)
+            }
+        }
+    }
+
+    private func predictionText(fiveHour: V4LimitDetail) -> String? {
+        let rate = viewModel.burnRatePerMin
+        guard rate > 0, let limit = fiveHour.token_limit, let used = fiveHour.tokens_used else { return nil }
+        let remaining = limit - used
+        guard remaining > 0 else { return l10n.str(.v4LimitReached) }
+        let predicted = Date().addingTimeInterval(Double(remaining) / rate * 60)
+        if let reset = parseResetsAt(fiveHour.resets_at), predicted > reset {
+            return l10n.str(.v4NoHitBeforeReset)
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return String(format: l10n.str(.v4PredictHit), formatter.string(from: predicted))
+    }
+
+    // ponytail: best-effort parse of human-readable resets_at ("in 1h 23m"); upgrade if the state file ships ISO timestamps
+    private func parseResetsAt(_ value: String?) -> Date? {
+        guard let value else { return nil }
+        let iso = ISO8601DateFormatter()
+        if let date = iso.date(from: value) { return date }
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = iso.date(from: value) { return date }
+        var seconds: TimeInterval = 0
+        if let match = value.firstMatch(of: /(\d+)\s*d/), let n = Double(match.1) { seconds += n * 86400 }
+        if let match = value.firstMatch(of: /(\d+)\s*h/), let n = Double(match.1) { seconds += n * 3600 }
+        if let match = value.firstMatch(of: /(\d+)\s*m/), let n = Double(match.1) { seconds += n * 60 }
+        return seconds > 0 ? Date().addingTimeInterval(seconds) : nil
     }
     
     private var projectsSection: some View {
@@ -738,7 +804,7 @@ struct StatusBarView: View {
     private var bottomBar: some View {
         HStack(spacing: 10) {
             if viewModel.errorMessage != nil {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.orange).imageScale(.small)
+                Image(systemName: "exclamationmark.triangle.fill").foregroundColor(theme.warning).imageScale(.small)
                 Text(l10n.str(.noDataError))
                     .font(.system(size: 10.5, weight: .medium))
                     .foregroundColor(theme.textSecondary)
@@ -769,7 +835,7 @@ struct StatusBarView: View {
     private func compactEmptyState(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 11, weight: .medium, design: .monospaced))
-            .foregroundColor(theme.textSecondary.opacity(0.6))
+            .foregroundColor(theme.textTertiary)
             .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
     }
 

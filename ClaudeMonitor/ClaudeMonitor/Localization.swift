@@ -3,13 +3,6 @@ import Foundation
 enum AppLanguage: String, CaseIterable {
     case chinese = "zh"
     case english = "en"
-
-    var displayName: String {
-        switch self {
-        case .chinese: return "中文"
-        case .english: return "English"
-        }
-    }
 }
 
 enum LocalizedKey {
@@ -32,7 +25,8 @@ enum LocalizedKey {
     // ViewModel
     case noDataError
     // v4 Rate Limits
-    case v4SectionTitle, v4FiveHourWindow, v4ResetsAt
+    case v4SectionTitle, v4SectionTitleEstimated, v4FiveHourWindow, v4ResetsAt
+    case v4SevenDayWindow, v4PredictHit, v4NoHitBeforeReset, v4LimitReached, v4EstimatedDisclaimer
 }
 
 @Observable
@@ -102,8 +96,14 @@ final class L10n {
             .axisCost:               "成本",
             .noDataError:            "未找到数据，请检查本地用量数据目录访问权限",
             .v4SectionTitle:         "官方速率限制 (v4)",
+            .v4SectionTitleEstimated:"速率限制 (本地估算)",
             .v4FiveHourWindow:       "5 小时窗口",
             .v4ResetsAt:             "重置于",
+            .v4SevenDayWindow:       "7 天窗口",
+            .v4PredictHit:           "预计 %@ 触顶",
+            .v4NoHitBeforeReset:     "重置前不会触顶",
+            .v4LimitReached:         "已达上限",
+            .v4EstimatedDisclaimer:  "基于本地 session 数据估算。安装 claude-code-usage-monitor 获取官方限额数据。",
         ],
         .english: [
             .settingsTitle:          "Settings",
@@ -141,8 +141,14 @@ final class L10n {
             .axisCost:               "Cost",
             .noDataError:            "No data found. Please check local usage data folder access",
             .v4SectionTitle:         "Official Rate Limits (v4)",
+            .v4SectionTitleEstimated:"Rate Limits (Estimated)",
             .v4FiveHourWindow:       "5-Hour Window",
             .v4ResetsAt:             "Resets at",
+            .v4SevenDayWindow:       "7-Day Window",
+            .v4PredictHit:           "Est. limit at %@",
+            .v4NoHitBeforeReset:     "Won't hit before reset",
+            .v4LimitReached:         "Limit reached",
+            .v4EstimatedDisclaimer:  "Based on local session data. Install claude-code-usage-monitor for official limits.",
         ],
     ]
 }
