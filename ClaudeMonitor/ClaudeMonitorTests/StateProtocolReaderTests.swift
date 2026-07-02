@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import ClaudeTokenMonitor
+@testable import ClaudeTokenMonitorBar
 
 struct StateProtocolReaderTests {
     

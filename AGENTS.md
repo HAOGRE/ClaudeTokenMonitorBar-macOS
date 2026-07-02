@@ -1,6 +1,6 @@
-# ClaudeTokenMonitor 项目规范
+# ClaudeTokenMonitorBar 项目规范
 
-本文档记录 ClaudeTokenMonitor 项目的开发、构建和发布规范。
+本文档记录 ClaudeTokenMonitorBar 项目的开发、构建和发布规范。
 
 ---
 
@@ -107,18 +107,18 @@ ls DerivedData/Build/Products/Release/ClaudeMonitor.app
 
 ```bash
 # 创建 DMG 文件
-hdiutil create -volname "ClaudeTokenMonitor" \
-  -srcfolder "DerivedData/Build/Products/Release/ClaudeMonitor.app" \
+hdiutil create -volname "ClaudeTokenMonitorBar" \
+  -srcfolder "DerivedData/Build/Products/Release/ClaudeTokenMonitorBar.app" \
   -ov -format UDZO \
-  "ClaudeTokenMonitor-v{VERSION}.dmg"
+  "ClaudeTokenMonitorBar-v{VERSION}.dmg"
 
 # 验证
-ls -lh ClaudeTokenMonitor-v{VERSION}.dmg
+ls -lh ClaudeTokenMonitorBar-v{VERSION}.dmg
 ```
 
 **命名规范**：
-- GitHub 分发：`ClaudeTokenMonitor-v{VERSION}.dmg`
-- AppStore 版本：`AITokenMonitor-v{VERSION}.dmg`（由 AppStore scheme 构建）
+- GitHub 分发：`ClaudeTokenMonitorBar-v{VERSION}.dmg`
+- AppStore 版本：`ClaudeTokenMonitorBar-v{VERSION}.dmg`（由 AppStore scheme 构建）
 
 ### 3.3 推送到 GitHub
 
@@ -153,7 +153,7 @@ gh release create v{VERSION} \
 **Full Changelog**: https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/compare/v{PREV_VERSION}...v{VERSION}"
 
 # 上传 DMG
-gh release upload v{VERSION} ClaudeTokenMonitor-v{VERSION}.dmg
+gh release upload v{VERSION} ClaudeTokenMonitorBar-v{VERSION}.dmg
 ```
 
 ---
@@ -193,7 +193,7 @@ ClaudeMonitor/
 - [ ] `StatusBarView.swift` 显示名称已更新（如需）
 - [ ] 版本号已更新（project.pbxproj）
 - [ ] Build 成功无错误
-- [ ] DMG 文件命名正确（ClaudeTokenMonitor-vX.X.X.dmg）
+- [ ] DMG 文件命名正确（ClaudeTokenMonitorBar-vX.X.X.dmg）
 - [ ] 已推送到 GitHub main 分支
 - [ ] GitHub Release 已创建
 - [ ] DMG 已上传到 Release

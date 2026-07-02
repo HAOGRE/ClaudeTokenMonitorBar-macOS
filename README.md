@@ -45,8 +45,8 @@ A native macOS menu bar companion app that monitors your **Claude Code** token u
 ### Option 1: Download DMG (Recommended)
 
 1. Go to [Releases](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
-2. Download `ClaudeTokenMonitor-v1.2.0.dmg`
-3. Open DMG, drag `ClaudeTokenMonitor.app` to **Applications**
+2. Download `ClaudeTokenMonitorBar-v1.2.0.dmg`
+3. Open DMG, drag `ClaudeTokenMonitorBar.app` to **Applications**
 4. Launch — the app appears in the menu bar immediately (no Dock icon by default)
 
 > **First launch**: right-click → Open to bypass Gatekeeper, or go to System Settings → Privacy & Security → Open Anyway.
@@ -155,7 +155,7 @@ The app shows a hint message and displays data automatically once Claude Code cr
 When `cost_usd` is present in the JSONL entry, that exact value is used. Otherwise, pricing is calculated using the Anthropic official rate table above.
 
 **Why is there both a "Claude Token Monitor" and "AI Token Monitor" version?**
-`ClaudeTokenMonitor` (this repo) is the open-source GitHub distribution. `AI Token Monitor` is the [App Store version](https://apps.apple.com/app/ai-token-monitor/id6744642402) with full sandbox compliance.
+`ClaudeTokenMonitorBar` (this repo) is the open-source GitHub distribution. The App Store version is also named `ClaudeTokenMonitorBar` with full sandbox compliance.
 
 ---
 
