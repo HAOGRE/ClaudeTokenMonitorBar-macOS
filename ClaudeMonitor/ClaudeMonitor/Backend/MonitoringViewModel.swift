@@ -144,8 +144,8 @@ final class MonitoringViewModel {
         
         let (result, state) = await Task.detached(priority: .userInitiated) {
             let v4State = await stateR.readState()
-            // 加载最多90天的数据以便生成热力图
-            let allData = reader.loadAllData(since: capturedResetDate, daysBack: 90)
+            // 加载约半年数据以便生成 Tokenscope 风格热力图
+            let allData = reader.loadAllData(since: capturedResetDate, daysBack: 190)
             return (LoadResult(allEntries: allData.allEntries, todayEntries: allData.todayEntries, projectEntries: allData.projectEntries, dailyEntries: allData.dailyEntries), v4State)
         }.value
 
@@ -217,7 +217,7 @@ final class MonitoringViewModel {
         }
         
         let startOfToday = calendar.startOfDay(for: now)
-        let heatmapDaysCount = 12 * 7 // 过去 12 周
+        let heatmapDaysCount = 26 * 7 // 过去 26 周
         var heatmap: [HeatDay] = []
         
         // 找出最大的 tokens 用于计算 level (0-4)
@@ -282,7 +282,7 @@ final class MonitoringViewModel {
         
         // Series & Trend
         let calendar = Calendar.current
-        var seriesDict: [String: (input: Int, cache: Int, output: Int, date: Date)] = [:]
+        var seriesDict: [String: (label: String, full: String, input: Int, cache: Int, output: Int, date: Date)] = [:]
         
         for entry in entries {
             let label: String
@@ -296,7 +296,14 @@ final class MonitoringViewModel {
                 groupDate = calendar.date(from: comps)!
                 label = "\(comps.hour!)h"
                 full = "\(comps.month!)/\(comps.day!) \(comps.hour!):00"
-            case .week, .month:
+            case .week:
+                let start = calendar.startOfDay(for: entry.timestamp)
+                groupDate = start
+                let comps = calendar.dateComponents([.month, .day], from: start)
+                let weekdayIndex = calendar.component(.weekday, from: start) - 1
+                label = calendar.shortWeekdaySymbols[weekdayIndex]
+                full = "\(comps.month!)/\(comps.day!)"
+            case .month:
                 // 按天
                 let start = calendar.startOfDay(for: entry.timestamp)
                 groupDate = start
@@ -305,19 +312,20 @@ final class MonitoringViewModel {
                 full = label
             }
             
-            let key = label
-            let cur = seriesDict[key] ?? (0, 0, 0, groupDate)
-            seriesDict[key] = (cur.input + entry.inputTokens, cur.cache + entry.cacheReadTokens + entry.cacheCreationTokens, cur.output + entry.outputTokens, groupDate)
+            let key = full
+            let cur = seriesDict[key] ?? (label, full, 0, 0, 0, groupDate)
+            seriesDict[key] = (
+                label,
+                full,
+                cur.input + entry.inputTokens,
+                cur.cache + entry.cacheReadTokens + entry.cacheCreationTokens,
+                cur.output + entry.outputTokens,
+                groupDate
+            )
         }
         
         report.series = seriesDict.values.sorted { $0.date < $1.date }.map {
-            SeriesPoint(label: "", full: "", input: $0.input, cache: $0.cache, output: $0.output)
-        }
-        // Fix labels
-        let sortedKeys = seriesDict.keys.sorted { seriesDict[$0]!.date < seriesDict[$1]!.date }
-        report.series = sortedKeys.map { k in
-            let v = seriesDict[k]!
-            return SeriesPoint(label: k, full: "", input: v.input, cache: v.cache, output: v.output)
+            SeriesPoint(label: $0.label, full: $0.full, input: $0.input, cache: $0.cache, output: $0.output)
         }
         
         // 简单趋势线 (Sparkline) - 使用 cost 和 request 的滑动聚合
