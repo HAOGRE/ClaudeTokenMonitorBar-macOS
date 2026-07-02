@@ -151,10 +151,8 @@ struct StatusBarView: View {
                             recentSection
                         }
 
-                        if settings.showChartSection {
-                            sectionDivider
-                            heatmapSection
-                        }
+                        sectionDivider
+                        heatmapSection
 
                         bottomBar
                     }
