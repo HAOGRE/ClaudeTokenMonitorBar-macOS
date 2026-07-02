@@ -35,37 +35,55 @@ extension Color {
     }
 }
 
-struct TokenScopeTheme {
-    static let bg = Color.dynamic(light: "#ffffff", dark: "#1f2226")
-    static let cardBg = Color.dynamic(light: "#ffffff", dark: "#1f2226") // Same as bg but we use a border or shadow if needed
-    static let cardBorder = Color.dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.08), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.10))
+struct Theme {
+    let isDark: Bool
+
+    func dynamic(light: String, dark: String) -> Color {
+        return Color(nsColor: NSColor(hex: isDark ? dark : light) ?? .black)
+    }
+    func dynamic(light: NSColor, dark: NSColor) -> Color {
+        return Color(nsColor: isDark ? dark : light)
+    }
+
+    var bg: Color { dynamic(light: "#ffffff", dark: "#1f2226") }
+    var cardBg: Color { dynamic(light: "#ffffff", dark: "#1f2226") }
+    var cardBorder: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.08), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.10)) }
     
-    static let primaryGreen = Color.dynamic(light: "#178a55", dark: "#27b06e")
-    static let chartGreen = Color.dynamic(light: "#178a55", dark: "#27b06e")
-    static let lightGreen = Color.dynamic(light: "#8fd9b4", dark: "#5fcf9c")
+    var primaryGreen: Color { dynamic(light: "#178a55", dark: "#27b06e") }
+    var chartGreen: Color { dynamic(light: "#178a55", dark: "#27b06e") }
+    var lightGreen: Color { dynamic(light: "#8fd9b4", dark: "#5fcf9c") }
     
-    static let textMain = Color.dynamic(light: NSColor(red: 17/255, green: 22/255, blue: 19/255, alpha: 0.94), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.94))
-    static let textSecondary = Color.dynamic(light: NSColor(red: 17/255, green: 22/255, blue: 19/255, alpha: 0.5), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.52))
-    static let separator = Color.dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.06), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.06))
+    var textMain: Color { dynamic(light: NSColor(red: 17/255, green: 22/255, blue: 19/255, alpha: 0.94), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.94)) }
+    var textSecondary: Color { dynamic(light: NSColor(red: 17/255, green: 22/255, blue: 19/255, alpha: 0.5), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.52)) }
+    var separator: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.06), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.06)) }
     
-    static let segBg = Color.dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.05), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.06))
-    static let segBorder = Color.dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.07), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.09))
-    static let segOnBg = Color.dynamic(light: NSColor(red: 1, green: 1, blue: 1, alpha: 1.0), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.15))
-    static let segOnText = Color.dynamic(light: "#111111", dark: "#ffffff")
-    static let segOffText = Color.dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.5), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.55))
+    var segBg: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.05), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.06)) }
+    var segBorder: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.07), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.09)) }
+    var segOnBg: Color { dynamic(light: NSColor(red: 1, green: 1, blue: 1, alpha: 1.0), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.15)) }
+    var segOnText: Color { dynamic(light: "#111111", dark: "#ffffff") }
+    var segOffText: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.5), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.55)) }
     
-    // Model colors
-    static let palette: [Color] = [
-        chartGreen,
-        lightGreen,
-        Color.dynamic(light: "#aeb8b2", dark: "#5a6660"),
-        Color.dynamic(light: "#70c39a", dark: "#40be84"),
-        Color.dynamic(light: "#a0e0c0", dark: "#7ce3b1")
-    ]
+    var gridEmpty: Color { dynamic(light: "#e5e7eb", dark: "#374151") }
+    var gridLevel1: Color { dynamic(light: "#d1fae5", dark: "#064e3b") }
+    var gridLevel2: Color { dynamic(light: "#6ee7b7", dark: "#047857") }
+    var gridLevel3: Color { dynamic(light: "#34d399", dark: "#10b981") }
+    var gridLevel4: Color { dynamic(light: "#10b981", dark: "#34d399") }
+    
+    var palette: [Color] {
+        [
+            chartGreen,
+            lightGreen,
+            dynamic(light: "#aeb8b2", dark: "#5a6660"),
+            dynamic(light: "#70c39a", dark: "#40be84"),
+            dynamic(light: "#a0e0c0", dark: "#7ce3b1")
+        ]
+    }
 }
 
 struct StatusBarView: View {
     @Environment(MonitoringViewModel.self) private var viewModel
+    @Environment(\.colorScheme) private var colorScheme
+    var theme: Theme { Theme(isDark: colorScheme == .dark) }
     @State private var selectedPeriod: Int = 1 // 0: Day, 1: Week, 2: Month
     @State private var showingSettings = false
     
@@ -122,22 +140,22 @@ struct StatusBarView: View {
                     // 4. Bar Chart
                     barChartSection
                     
-                    Divider().background(TokenScopeTheme.separator)
+                    Divider().background(theme.separator)
                     
                     // 5. Tokens by Model
                     tokensByModelSection
                     
-                    Divider().background(TokenScopeTheme.separator)
+                    Divider().background(theme.separator)
                     
                     // 6. Cost by Model
                     costByModelSection
                     
-                    Divider().background(TokenScopeTheme.separator)
+                    Divider().background(theme.separator)
                     
                     // 7. Request & Cost Trend Cards
                     trendCardsSection
                     
-                    Divider().background(TokenScopeTheme.separator)
+                    Divider().background(theme.separator)
                     
                     // 8. Projects (MCP Calls style)
                     if settings.showProjectSection {
@@ -162,7 +180,7 @@ struct StatusBarView: View {
             }
         }
         .frame(width: 400, height: 750)
-        .background(TokenScopeTheme.bg)
+        .background(theme.bg)
     }
     
     // MARK: - Sections
@@ -172,11 +190,11 @@ struct StatusBarView: View {
             HStack {
                 HStack(spacing: 6) {
                     Image(systemName: "chart.bar.fill")
-                        .foregroundColor(TokenScopeTheme.primaryGreen)
+                        .foregroundColor(theme.primaryGreen)
                         .font(.system(size: 18))
                     Text("Tokenscope")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(TokenScopeTheme.textMain)
+                        .foregroundColor(theme.textMain)
                 }
                 
                 Spacer()
@@ -188,29 +206,29 @@ struct StatusBarView: View {
                     PeriodButton(title: "Month", isSelected: selectedPeriod == 2) { selectedPeriod = 2 }
                 }
                 .padding(2)
-                .background(TokenScopeTheme.segBg)
+                .background(theme.segBg)
                 .cornerRadius(8)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(TokenScopeTheme.segBorder, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(theme.segBorder, lineWidth: 1))
                 
                 HStack(spacing: 8) {
                     Button(action: {}) {
                         Image(systemName: "display")
                             .font(.system(size: 14))
-                            .foregroundColor(TokenScopeTheme.segOffText)
+                            .foregroundColor(theme.segOffText)
                             .frame(width: 26, height: 26)
-                            .background(TokenScopeTheme.segBg)
+                            .background(theme.segBg)
                             .cornerRadius(7)
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(TokenScopeTheme.segBorder, lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(theme.segBorder, lineWidth: 1))
                     }.buttonStyle(.plain)
                     
                     Button(action: {}) {
                         Image(systemName: "camera")
                             .font(.system(size: 14))
-                            .foregroundColor(TokenScopeTheme.segOffText)
+                            .foregroundColor(theme.segOffText)
                             .frame(width: 26, height: 26)
-                            .background(TokenScopeTheme.segBg)
+                            .background(theme.segBg)
                             .cornerRadius(7)
-                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(TokenScopeTheme.segBorder, lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: 7).stroke(theme.segBorder, lineWidth: 1))
                     }.buttonStyle(.plain)
                 }
                 .padding(.leading, 4)
@@ -218,7 +236,7 @@ struct StatusBarView: View {
             .padding(.horizontal, 20)
             .padding(.top, 16)
             
-            Divider().background(TokenScopeTheme.separator)
+            Divider().background(theme.separator)
         }
     }
     
@@ -228,16 +246,16 @@ struct StatusBarView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("TOTAL TOKENS")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(TokenScopeTheme.textSecondary)
+                        .foregroundColor(theme.textSecondary)
                     
                     HStack(alignment: .lastTextBaseline, spacing: 4) {
                         let formatted = formatLargeNumber(currentReport.metrics.totalTokens)
                         Text(formatted.value)
                             .font(.system(size: 42, weight: .bold, design: .rounded))
-                            .foregroundColor(TokenScopeTheme.textMain)
+                            .foregroundColor(theme.textMain)
                         Text(formatted.suffix)
                             .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundColor(TokenScopeTheme.textSecondary)
+                            .foregroundColor(theme.textSecondary)
                         
                         // Badge
                         HStack(spacing: 2) {
@@ -251,8 +269,8 @@ struct StatusBarView: View {
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 4)
-                        .background(TokenScopeTheme.primaryGreen.opacity(0.15))
-                        .foregroundColor(TokenScopeTheme.primaryGreen)
+                        .background(theme.primaryGreen.opacity(0.15))
+                        .foregroundColor(theme.primaryGreen)
                         .cornerRadius(4)
                         .padding(.bottom, 8)
                     }
@@ -263,10 +281,10 @@ struct StatusBarView: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Est. cost")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(TokenScopeTheme.textSecondary)
+                        .foregroundColor(theme.textSecondary)
                     Text(MonitoringViewModel.formatCost(currentReport.metrics.cost))
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(TokenScopeTheme.primaryGreen)
+                        .foregroundColor(theme.primaryGreen)
                 }
                 .padding(.top, 14)
             }
@@ -281,11 +299,11 @@ struct StatusBarView: View {
             
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4).fill(TokenScopeTheme.separator)
+                    RoundedRectangle(cornerRadius: 4).fill(theme.separator)
                     if currentReport.metrics.totalTokens > 0 {
                         HStack(spacing: 0) {
-                            TokenScopeTheme.chartGreen.frame(width: geo.size.width * CGFloat(inRatio))
-                            TokenScopeTheme.lightGreen.frame(width: geo.size.width * CGFloat(outRatio))
+                            theme.chartGreen.frame(width: geo.size.width * CGFloat(inRatio))
+                            theme.lightGreen.frame(width: geo.size.width * CGFloat(outRatio))
                         }
                         .cornerRadius(4)
                     }
@@ -295,22 +313,22 @@ struct StatusBarView: View {
             
             HStack {
                 HStack(spacing: 4) {
-                    Circle().fill(TokenScopeTheme.chartGreen).frame(width: 8, height: 8)
+                    Circle().fill(theme.chartGreen).frame(width: 8, height: 8)
                     Text("Input \(formatLargeNumberStr(currentReport.metrics.inputTokens))")
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(TokenScopeTheme.textSecondary)
+                        .foregroundColor(theme.textSecondary)
                 }
                 Spacer()
                 HStack(spacing: 4) {
-                    Circle().fill(TokenScopeTheme.lightGreen).frame(width: 8, height: 8)
+                    Circle().fill(theme.lightGreen).frame(width: 8, height: 8)
                     Text("Output \(formatLargeNumberStr(currentReport.metrics.outputTokens))")
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(TokenScopeTheme.textSecondary)
+                        .foregroundColor(theme.textSecondary)
                 }
                 Spacer()
                 Text("0% cached")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(TokenScopeTheme.textSecondary.opacity(0.6))
+                    .foregroundColor(theme.textSecondary.opacity(0.6))
             }
         }
     }
@@ -319,21 +337,21 @@ struct StatusBarView: View {
         VStack {
             Chart(currentReport.series) { item in
                 BarMark(x: .value("Time", item.label), y: .value("Input", item.input))
-                    .foregroundStyle(TokenScopeTheme.chartGreen)
+                    .foregroundStyle(theme.chartGreen)
                 BarMark(x: .value("Time", item.label), y: .value("Output", item.output))
-                    .foregroundStyle(TokenScopeTheme.lightGreen)
+                    .foregroundStyle(theme.lightGreen)
             }
             .chartXAxis {
                 AxisMarks { value in
                     AxisValueLabel()
                         .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(TokenScopeTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                 }
             }
             .chartYAxis {
                 AxisMarks(values: .automatic(desiredCount: 4)) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 1))
-                        .foregroundStyle(TokenScopeTheme.separator)
+                        .foregroundStyle(theme.separator)
                 }
             }
             .frame(height: 120)
@@ -344,12 +362,12 @@ struct StatusBarView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("TOKENS BY MODEL")
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(TokenScopeTheme.textSecondary)
+                .foregroundColor(theme.textSecondary)
             
             if currentReport.models.isEmpty {
                 Text("No usage in this period")
                     .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundColor(TokenScopeTheme.textSecondary.opacity(0.6))
+                    .foregroundColor(theme.textSecondary.opacity(0.6))
                     .padding(.vertical, 8)
             } else {
                 let total = max(1, currentReport.metrics.totalTokens)
@@ -357,7 +375,7 @@ struct StatusBarView: View {
                     let pct = Double(model.tokens) / Double(total)
                     HStack(spacing: 8) {
                         Circle()
-                            .fill(TokenScopeTheme.palette[index % TokenScopeTheme.palette.count])
+                            .fill(theme.palette[index % theme.palette.count])
                             .frame(width: 8, height: 8)
                         Text(shortModelName(model.name))
                             .font(.system(size: 12, weight: .medium))
@@ -367,9 +385,9 @@ struct StatusBarView: View {
                         // Mini Bar
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 2).fill(TokenScopeTheme.separator)
+                                RoundedRectangle(cornerRadius: 2).fill(theme.separator)
                                 RoundedRectangle(cornerRadius: 2)
-                                    .fill(TokenScopeTheme.palette[index % TokenScopeTheme.palette.count])
+                                    .fill(theme.palette[index % theme.palette.count])
                                     .frame(width: geo.size.width * CGFloat(pct))
                             }
                         }
@@ -377,7 +395,7 @@ struct StatusBarView: View {
                         
                         Text(formatLargeNumberStr(model.tokens))
                             .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(TokenScopeTheme.textSecondary)
+                            .foregroundColor(theme.textSecondary)
                             .frame(width: 45, alignment: .trailing)
                             
                         Text("\(Int(pct * 100))%")
@@ -393,12 +411,12 @@ struct StatusBarView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("COST BY MODEL")
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(TokenScopeTheme.textSecondary)
+                .foregroundColor(theme.textSecondary)
             
             if currentReport.models.isEmpty {
                 Text("-")
                     .font(.system(size: 16, weight: .medium, design: .monospaced))
-                    .foregroundColor(TokenScopeTheme.textSecondary.opacity(0.6))
+                    .foregroundColor(theme.textSecondary.opacity(0.6))
                     .padding(.vertical, 8)
             } else {
                 HStack(spacing: 20) {
@@ -423,7 +441,7 @@ struct StatusBarView: View {
                         ForEach(Array(currentReport.models.prefix(5).enumerated()), id: \.element.id) { index, model in
                             HStack {
                                 Circle()
-                                    .fill(TokenScopeTheme.palette[index % TokenScopeTheme.palette.count])
+                                    .fill(theme.palette[index % theme.palette.count])
                                     .frame(width: 8, height: 8)
                                 Text(shortModelName(model.name))
                                     .font(.system(size: 12, weight: .medium))
@@ -431,7 +449,7 @@ struct StatusBarView: View {
                                 Spacer()
                                 Text(MonitoringViewModel.formatCost(model.cost))
                                     .font(.system(size: 11, design: .monospaced))
-                                    .foregroundColor(TokenScopeTheme.textSecondary)
+                                    .foregroundColor(theme.textSecondary)
                             }
                         }
                     }
@@ -455,13 +473,13 @@ struct StatusBarView: View {
             }
             
             if let v4 = viewModel.monitoringData.v4State?.limits?.five_hour {
-                Divider().background(TokenScopeTheme.separator)
+                Divider().background(theme.separator)
                 v4RateLimitsSection(fiveHour: v4)
             }
         }
         .padding(16)
-        .background(TokenScopeTheme.cardBg)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(TokenScopeTheme.separator, lineWidth: 1))
+        .background(theme.cardBg)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.separator, lineWidth: 1))
         .cornerRadius(12)
     }
 
@@ -474,10 +492,10 @@ struct StatusBarView: View {
             HStack {
                 Image(systemName: "shield.checkerboard")
                     .font(.system(size: 14))
-                    .foregroundColor(TokenScopeTheme.textSecondary)
+                    .foregroundColor(theme.textSecondary)
                 Text("OFFICIAL RATE LIMITS (V4)")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(TokenScopeTheme.textSecondary)
+                    .foregroundColor(theme.textSecondary)
                 Spacer()
             }
             
@@ -485,17 +503,17 @@ struct StatusBarView: View {
                 HStack {
                     Text("5-Hour Window")
                         .font(.system(size: 12))
-                        .foregroundColor(TokenScopeTheme.textSecondary)
+                        .foregroundColor(theme.textSecondary)
                     Spacer()
                     Text("\(String(format: "%.1f", percentage))%")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(percentage > 90 ? .red : (percentage > 75 ? .orange : TokenScopeTheme.textMain))
+                        .foregroundColor(percentage > 90 ? .red : (percentage > 75 ? .orange : theme.textMain))
                 }
                 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(TokenScopeTheme.separator)
+                            .fill(theme.separator)
                             .frame(height: 6)
                         
                         RoundedRectangle(cornerRadius: 3)
@@ -510,7 +528,7 @@ struct StatusBarView: View {
                         Spacer()
                         Text("Resets at \(resetsAt)")
                             .font(.system(size: 11))
-                            .foregroundColor(TokenScopeTheme.textSecondary)
+                            .foregroundColor(theme.textSecondary)
                     }
                 }
             }
@@ -522,11 +540,11 @@ struct StatusBarView: View {
             HStack {
                 Text("PROJECT CALLS")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(TokenScopeTheme.textSecondary)
+                    .foregroundColor(theme.textSecondary)
                 Spacer()
                 Text("\(currentReport.metrics.requests) · \(currentReport.projects.count) projects")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(TokenScopeTheme.textSecondary)
+                    .foregroundColor(theme.textSecondary)
             }
             
             let projects = currentReport.projects.prefix(5)
@@ -543,9 +561,9 @@ struct StatusBarView: View {
                     
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2).fill(TokenScopeTheme.separator)
+                            RoundedRectangle(cornerRadius: 2).fill(theme.separator)
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(TokenScopeTheme.chartGreen)
+                                .fill(theme.chartGreen)
                                 .frame(width: geo.size.width * CGFloat(pct))
                         }
                     }
@@ -553,7 +571,7 @@ struct StatusBarView: View {
                     
                     Text("\(proj.count)")
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(TokenScopeTheme.textSecondary)
+                        .foregroundColor(theme.textSecondary)
                         .frame(width: 40, alignment: .trailing)
                 }
             }
@@ -565,11 +583,11 @@ struct StatusBarView: View {
             HStack {
                 Text("RECENT CALLS")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(TokenScopeTheme.textSecondary)
+                    .foregroundColor(theme.textSecondary)
                 Spacer()
                 Text("\(viewModel.monitoringData.recentEntries.count) latest")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(TokenScopeTheme.textSecondary)
+                    .foregroundColor(theme.textSecondary)
             }
             
             let entries = viewModel.monitoringData.recentEntries.suffix(5).reversed()
@@ -586,9 +604,9 @@ struct StatusBarView: View {
                     
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2).fill(TokenScopeTheme.separator)
+                            RoundedRectangle(cornerRadius: 2).fill(theme.separator)
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(TokenScopeTheme.lightGreen)
+                                .fill(theme.lightGreen)
                                 .frame(width: geo.size.width * CGFloat(pct))
                         }
                     }
@@ -596,7 +614,7 @@ struct StatusBarView: View {
                     
                     Text("\(tokens)")
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(TokenScopeTheme.textSecondary)
+                        .foregroundColor(theme.textSecondary)
                         .frame(width: 40, alignment: .trailing)
                 }
             }
@@ -604,27 +622,67 @@ struct StatusBarView: View {
     }
     
     private var heatmapSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("DAILY ACTIVITY")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(TokenScopeTheme.textSecondary)
-            
-            let heatmap = viewModel.monitoringData.dashboard.heatmap
-            if heatmap.isEmpty {
-                Text("No data").font(.caption).foregroundColor(.secondary)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    let columns = Array(repeating: GridItem(.fixed(10), spacing: 3), count: 7)
-                    LazyHGrid(rows: columns, spacing: 3) {
-                        ForEach(heatmap) { day in
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(colorForLevel(day.level))
-                                .frame(width: 10, height: 10)
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("DAILY ACTIVITY")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(theme.textSecondary)
+                
+                let heatmap = viewModel.monitoringData.dashboard.heatmap
+                if heatmap.isEmpty {
+                    Text("No data").font(.caption).foregroundColor(.secondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Month labels
+                        HStack(spacing: 0) {
+                            Text("Jan").font(.system(size: 10)).foregroundColor(theme.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Feb").font(.system(size: 10)).foregroundColor(theme.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Mar").font(.system(size: 10)).foregroundColor(theme.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Apr").font(.system(size: 10)).foregroundColor(theme.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
+                            Text("May").font(.system(size: 10)).foregroundColor(theme.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Jun").font(.system(size: 10)).foregroundColor(theme.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Jul").font(.system(size: 10)).foregroundColor(theme.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            let rows = Array(repeating: GridItem(.fixed(12), spacing: 4), count: 7)
+                            LazyHGrid(rows: rows, spacing: 4) {
+                                ForEach(heatmap) { day in
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(colorForLevel(day.level))
+                                        .frame(width: 12, height: 12)
+                                }
+                            }
+                        }
+                        
+                        // Legend
+                        HStack(spacing: 4) {
+                            Spacer()
+                            Text("Less").font(.system(size: 10)).foregroundColor(theme.textSecondary).padding(.trailing, 2)
+                            ForEach(0..<5) { level in
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(colorForLevel(level))
+                                    .frame(width: 12, height: 12)
+                            }
+                            Text("More").font(.system(size: 10)).foregroundColor(theme.textSecondary).padding(.leading, 2)
                         }
                     }
                 }
-                .frame(height: 100)
             }
+            .padding(16)
+            .background(theme.cardBg)
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.separator, lineWidth: 1))
+            .cornerRadius(12)
+            
+            // Text at bottom
+            HStack {
+                Spacer()
+                Text("Est. cost via models.dev / LiteLLM · estimate")
+                    .font(.system(size: 11))
+                    .foregroundColor(theme.textSecondary)
+                Spacer()
+            }
+            .padding(.top, 12)
         }
     }
     
@@ -645,11 +703,11 @@ struct StatusBarView: View {
     
     private func colorForLevel(_ level: Int) -> Color {
         switch level {
-        case 1: return TokenScopeTheme.chartGreen.opacity(0.3)
-        case 2: return TokenScopeTheme.chartGreen.opacity(0.5)
-        case 3: return TokenScopeTheme.chartGreen.opacity(0.75)
-        case 4: return TokenScopeTheme.chartGreen
-        default: return TokenScopeTheme.separator
+        case 1: return theme.gridLevel1
+        case 2: return theme.gridLevel2
+        case 3: return theme.gridLevel3
+        case 4: return theme.gridLevel4
+        default: return theme.gridEmpty
         }
     }
     
@@ -685,6 +743,9 @@ struct StatusBarView: View {
 // MARK: - Subcomponents
 
 private struct PeriodButton: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var theme: Theme { Theme(isDark: colorScheme == .dark) }
+    
     let title: String
     let isSelected: Bool
     let action: () -> Void
@@ -693,9 +754,9 @@ private struct PeriodButton: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 12, weight: isSelected ? .bold : .medium))
-                .foregroundColor(isSelected ? TokenScopeTheme.segOnText : TokenScopeTheme.segOffText)
+                .foregroundColor(isSelected ? theme.segOnText : theme.segOffText)
                 .frame(width: 50, height: 24)
-                .background(isSelected ? TokenScopeTheme.segOnBg : Color.clear)
+                .background(isSelected ? theme.segOnBg : Color.clear)
                 .cornerRadius(6)
                 .shadow(color: isSelected ? Color.black.opacity(0.12) : Color.clear, radius: 1, y: 1)
         }
@@ -704,6 +765,8 @@ private struct PeriodButton: View {
 }
 
 private struct TrendCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var theme: Theme { Theme(isDark: colorScheme == .dark) }
     let title: String
     let value: String
     let subtitle: String
@@ -716,13 +779,13 @@ private struct TrendCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(TokenScopeTheme.textSecondary)
+                        .foregroundColor(theme.textSecondary)
                     Text(value)
                         .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(TokenScopeTheme.textMain)
+                        .foregroundColor(theme.textMain)
                     Text(subtitle)
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(TokenScopeTheme.textSecondary)
+                        .foregroundColor(theme.textSecondary)
                 }
                 Spacer()
                 
@@ -737,13 +800,15 @@ private struct TrendCard: View {
             }
         }
         .padding(16)
-        .background(TokenScopeTheme.cardBg)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(TokenScopeTheme.separator, lineWidth: 1))
+        .background(theme.cardBg)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.separator, lineWidth: 1))
         .cornerRadius(12)
     }
 }
 
 struct StatItem: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var theme: Theme { Theme(isDark: colorScheme == .dark) }
     let icon: String
     let color: Color
     let title: String
@@ -761,10 +826,10 @@ struct StatItem: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(TokenScopeTheme.textSecondary)
+                    .foregroundColor(theme.textSecondary)
                 Text(value)
                     .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(TokenScopeTheme.textMain)
+                    .foregroundColor(theme.textMain)
             }
             Spacer()
         }
@@ -772,6 +837,8 @@ struct StatItem: View {
 }
 
 private struct SparklineView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var theme: Theme { Theme(isDark: colorScheme == .dark) }
     let points: [Double]
     let color: Color
     
