@@ -18,13 +18,7 @@ final class AppSettings {
     }
     static let refreshIntervalOptions = [3, 5, 10, 30, 60]
 
-    // MARK: - 语言
-    var language: AppLanguage {
-        didSet {
-            UserDefaults.standard.set(language.rawValue, forKey: "appLanguage")
-            L10n.shared.language = language
-        }
-    }
+
 
     // MARK: - Dock 图标
     var showDockIcon: Bool {
@@ -53,13 +47,8 @@ final class AppSettings {
         refreshInterval    = defaults.object(forKey: "refreshInterval")    as? Int  ?? 5
         showDockIcon       = defaults.object(forKey: "showDockIcon")       as? Bool ?? false
 
-        let savedLang = defaults.string(forKey: "appLanguage") ?? ""
-        language = AppLanguage(rawValue: savedLang) ?? .chinese
-
         // 从系统读取开机启动的实际状态（以系统为准，不存 UserDefaults）
         launchAtLogin = SMAppService.mainApp.status == .enabled
-
-        L10n.shared.language = language
     }
 
     // MARK: - 开机启动实现

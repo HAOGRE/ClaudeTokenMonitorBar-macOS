@@ -40,7 +40,10 @@ final class L10n {
     static let shared = L10n()
     private init() {}
 
-    var language: AppLanguage = .chinese
+    var language: AppLanguage {
+        let systemLang = Locale.current.languageCode ?? "zh"
+        return systemLang.hasPrefix("zh") ? .chinese : .english
+    }
 
     func str(_ key: LocalizedKey) -> String {
         strings[language]?[key] ?? strings[.chinese]?[key] ?? "\(key)"

@@ -69,21 +69,6 @@ struct SettingsView: View {
 
                 Divider()
 
-                // 语言
-                settingsSectionHeader(title: "语言 / Language", icon: "globe")
-
-                Picker("", selection: Binding(
-                    get: { settings.language },
-                    set: { settings.language = $0 }
-                )) {
-                    ForEach(AppLanguage.allCases, id: \.self) { lang in
-                        Text(lang.displayName).tag(lang)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-
-                Divider()
 
                 // 显示项
                 settingsSectionHeader(title: l10n.str(.sectionDisplay), icon: "eye.fill")

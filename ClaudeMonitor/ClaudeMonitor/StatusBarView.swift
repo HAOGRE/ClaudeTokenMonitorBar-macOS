@@ -103,30 +103,11 @@ private enum DashboardLayout {
 struct StatusBarView: View {
     @Environment(MonitoringViewModel.self) private var viewModel
     @Environment(\.colorScheme) private var colorScheme
-    @AppStorage("tokenscopeThemeMode") private var themeMode = "system"
-    var theme: Theme { Theme(isDark: effectiveColorScheme == .dark) }
+    var theme: Theme { Theme(isDark: colorScheme == .dark) }
     @State private var selectedPeriod: Int = 1 // 0: Day, 1: Week, 2: Month
     @State private var showingSettings = false
-    
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
-
-    private var preferredColorScheme: ColorScheme? {
-        switch themeMode {
-        case "dark": return .dark
-        case "light": return .light
-        default: return nil
-        }
-    }
-
-    private var effectiveColorScheme: ColorScheme {
-        switch themeMode {
-        case "dark": return .dark
-        case "light": return .light
-        default: return colorScheme
-        }
-    }
-    
     private var currentReport: PeriodReport {
         let dashboard = viewModel.monitoringData.dashboard
         switch selectedPeriod {
@@ -153,7 +134,6 @@ struct StatusBarView: View {
                 mainView
             }
         }
-        .preferredColorScheme(preferredColorScheme)
     }
     
     private var mainView: some View {
@@ -239,12 +219,7 @@ struct StatusBarView: View {
 
             HStack(spacing: 4) {
                 headerIconButton(
-                    systemName: effectiveColorScheme == .dark ? "moon.fill" : "sun.max",
-                    help: "Toggle theme",
-                    action: toggleTheme
-                )
-                headerIconButton(
-                    systemName: "camera",
+                    systemName: "square.and.arrow.up",
                     help: "Copy panel snapshot",
                     action: copyPanelSnapshot
                 )
@@ -270,10 +245,6 @@ struct StatusBarView: View {
         }
         .buttonStyle(.plain)
         .help(help)
-    }
-
-    private func toggleTheme() {
-        themeMode = effectiveColorScheme == .dark ? "light" : "dark"
     }
 
     private func copyPanelSnapshot() {
