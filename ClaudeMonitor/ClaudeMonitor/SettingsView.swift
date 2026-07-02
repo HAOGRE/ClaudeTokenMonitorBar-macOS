@@ -109,17 +109,6 @@ struct SettingsView: View {
                         set: { settings.showRecentSection = $0 }
                     )
                 )
-
-                SettingsToggleRow(
-                    icon: "chart.bar.fill",
-                    iconColor: .purple,
-                    title: l10n.str(.trendTitle),
-                    subtitle: l10n.str(.trendSubtitle),
-                    isOn: Binding(
-                        get: { settings.showChartSection },
-                        set: { settings.showChartSection = $0 }
-                    )
-                )
             }
             .padding(16)
 

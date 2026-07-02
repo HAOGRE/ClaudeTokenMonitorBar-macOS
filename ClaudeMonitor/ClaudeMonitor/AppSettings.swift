@@ -11,9 +11,6 @@ final class AppSettings {
     var showRecentSection: Bool {
         didSet { UserDefaults.standard.set(showRecentSection, forKey: "showRecentSection") }
     }
-    var showChartSection: Bool {
-        didSet { UserDefaults.standard.set(showChartSection, forKey: "showChartSection") }
-    }
 
     // MARK: - 刷新间隔（秒）
     var refreshInterval: Int {
@@ -53,7 +50,6 @@ final class AppSettings {
         // 首次启动默认全部显示
         showProjectSection = defaults.object(forKey: "showProjectSection") as? Bool ?? true
         showRecentSection  = defaults.object(forKey: "showRecentSection")  as? Bool ?? true
-        showChartSection   = defaults.object(forKey: "showChartSection")   as? Bool ?? true
         refreshInterval    = defaults.object(forKey: "refreshInterval")    as? Int  ?? 5
         showDockIcon       = defaults.object(forKey: "showDockIcon")       as? Bool ?? false
 

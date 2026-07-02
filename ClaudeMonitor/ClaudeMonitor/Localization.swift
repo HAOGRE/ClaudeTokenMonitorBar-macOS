@@ -20,7 +20,6 @@ enum LocalizedKey {
     case refreshIntervalTitle, refreshIntervalSubtitle
     case topProjectsTitle, topProjectsSubtitle
     case recentRecordsTitle, recentRecordsSubtitle
-    case trendTitle, trendSubtitle
     // StatusBarView
     case appTitle, pickerAll, pickerToday
     case todayCost, totalCost
@@ -78,8 +77,6 @@ final class L10n {
             .topProjectsSubtitle:    "显示成本最高的 5 个项目",
             .recentRecordsTitle:     "最近记录",
             .recentRecordsSubtitle:  "显示最近 5 条使用记录",
-            .trendTitle:             "30 天趋势",
-            .trendSubtitle:          "显示近 30 天的成本趋势图",
             .appTitle:               "AI Token 实时监控",
             .pickerAll:              "全部",
             .pickerToday:            "今天",
@@ -119,8 +116,6 @@ final class L10n {
             .topProjectsSubtitle:    "Show the 5 most expensive projects",
             .recentRecordsTitle:     "Recent Records",
             .recentRecordsSubtitle:  "Show the latest 5 usage records",
-            .trendTitle:             "30-Day Trend",
-            .trendSubtitle:          "Show cost trend chart for the past 30 days",
             .appTitle:               "AI Token Monitor",
             .pickerAll:              "All",
             .pickerToday:            "Today",
