@@ -11,9 +11,14 @@ struct Metrics {
     var cacheTokens: Int = 0
     var outputTokens: Int = 0
     var cost: Double = 0
+    var mcpCalls: Int = 0
+    var skillCalls: Int = 0
     var requests: Int = 0
     var sessions: Int = 0
     var deltaTokens: Double = 0 // pct
+    var deltaCost: Double = 0 // pct
+    var servers: Int = 0
+    var skills: Int = 0
 }
 
 struct ModelStat: Identifiable {
@@ -33,7 +38,7 @@ struct NamedCount: Identifiable {
 }
 
 struct SeriesPoint: Identifiable {
-    var id: String { label }
+    var id: String { full }
     var label: String
     var full: String
     var input: Int
@@ -53,6 +58,8 @@ struct PeriodReport {
     var series: [SeriesPoint] = []
     var models: [ModelStat] = []
     var projects: [NamedCount] = []
+    var mcp: [NamedCount] = []
+    var skills: [NamedCount] = []
     var reqTrend: [Double] = []
     var costTrend: [Double] = []
     
@@ -94,6 +101,8 @@ private struct LoadResult: Sendable {
     let todayEntries: [UsageEntry]
     let projectEntries: [String: [UsageEntry]]
     let dailyEntries: [Date: [UsageEntry]]
+    let installedMcpServers: Int
+    let installedSkills: Int
 }
 
 // MARK: - 监控视图模型
@@ -146,7 +155,17 @@ final class MonitoringViewModel {
             let v4State = await stateR.readState()
             // 加载约半年数据以便生成 Tokenscope 风格热力图
             let allData = reader.loadAllData(since: capturedResetDate, daysBack: 190)
-            return (LoadResult(allEntries: allData.allEntries, todayEntries: allData.todayEntries, projectEntries: allData.projectEntries, dailyEntries: allData.dailyEntries), v4State)
+            return (
+                LoadResult(
+                    allEntries: allData.allEntries,
+                    todayEntries: allData.todayEntries,
+                    projectEntries: allData.projectEntries,
+                    dailyEntries: allData.dailyEntries,
+                    installedMcpServers: allData.installedMcpServers,
+                    installedSkills: allData.installedSkills
+                ),
+                v4State
+            )
         }.value
 
         updateMonitoringData(from: result, v4State: state)
@@ -193,49 +212,63 @@ final class MonitoringViewModel {
 
         // 构建 Dashboard
         var dashboard = Dashboard()
-        dashboard.day = buildPeriodReport(entries: result.allEntries.filter { now.timeIntervalSince($0.timestamp) <= 86400 }, period: .day)
-        dashboard.week = buildPeriodReport(entries: result.allEntries.filter { now.timeIntervalSince($0.timestamp) <= 86400 * 7 }, period: .week)
-        dashboard.month = buildPeriodReport(entries: result.allEntries.filter { now.timeIntervalSince($0.timestamp) <= 86400 * 30 }, period: .month)
-        
-        // 项目聚合放入全局或随期间，为了性能，我们将全局项目放入 month，或者按实际 entries 聚合
-        // 此处直接聚合 allEntries 为项目
-        var projects: [String: Int] = [:]
-        for (proj, entries) in result.projectEntries {
-            projects[proj] = entries.reduce(0) { $0 + $1.inputTokens + $1.outputTokens }
-        }
-        let projectList = projects.map { NamedCount(name: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
-        
-        dashboard.day.projects = projectList
-        dashboard.week.projects = projectList
-        dashboard.month.projects = projectList
+        let dayRange = periodRange(for: .day, now: now, calendar: calendar)
+        let weekRange = periodRange(for: .week, now: now, calendar: calendar)
+        let monthRange = periodRange(for: .month, now: now, calendar: calendar)
+
+        dashboard.day = buildPeriodReport(
+            entries: entries(in: result.allEntries, from: dayRange.currentStart, to: dayRange.currentEnd),
+            previousEntries: entries(in: result.allEntries, from: dayRange.previousStart, to: dayRange.previousEnd),
+            period: .day,
+            now: now,
+            installedMcpServers: result.installedMcpServers,
+            installedSkills: result.installedSkills
+        )
+        dashboard.week = buildPeriodReport(
+            entries: entries(in: result.allEntries, from: weekRange.currentStart, to: weekRange.currentEnd),
+            previousEntries: entries(in: result.allEntries, from: weekRange.previousStart, to: weekRange.previousEnd),
+            period: .week,
+            now: now,
+            installedMcpServers: result.installedMcpServers,
+            installedSkills: result.installedSkills
+        )
+        dashboard.month = buildPeriodReport(
+            entries: entries(in: result.allEntries, from: monthRange.currentStart, to: monthRange.currentEnd),
+            previousEntries: entries(in: result.allEntries, from: monthRange.previousStart, to: monthRange.previousEnd),
+            period: .month,
+            now: now,
+            installedMcpServers: result.installedMcpServers,
+            installedSkills: result.installedSkills
+        )
 
         // 构建 Heatmap
         var heatmapMap: [Date: Int] = [:]
         for entry in result.allEntries {
             let start = calendar.startOfDay(for: entry.timestamp)
-            heatmapMap[start, default: 0] += (entry.inputTokens + entry.outputTokens)
+            heatmapMap[start, default: 0] += entry.inputTokens + entry.cacheCreationTokens + entry.cacheReadTokens + entry.outputTokens
         }
         
         let startOfToday = calendar.startOfDay(for: now)
-        let heatmapDaysCount = 26 * 7 // 过去 26 周
+        let daysFromSunday = calendar.component(.weekday, from: startOfToday) - 1
+        let heatmapStart = calendar.date(byAdding: .day, value: -(25 * 7 + daysFromSunday), to: startOfToday) ?? startOfToday
         var heatmap: [HeatDay] = []
         
         // 找出最大的 tokens 用于计算 level (0-4)
         let maxTokens = heatmapMap.values.max() ?? 1
         
-        for i in (0..<heatmapDaysCount).reversed() {
-            if let date = calendar.date(byAdding: .day, value: -i, to: startOfToday) {
-                let tokens = heatmapMap[date] ?? 0
-                var level = 0
-                if tokens > 0 {
-                    let ratio = Double(tokens) / Double(maxTokens)
-                    if ratio > 0.75 { level = 4 }
-                    else if ratio > 0.5 { level = 3 }
-                    else if ratio > 0.25 { level = 2 }
-                    else { level = 1 }
-                }
-                heatmap.append(HeatDay(date: date, tokens: tokens, level: level))
+        var cursor = heatmapStart
+        while cursor <= startOfToday {
+            let tokens = heatmapMap[cursor] ?? 0
+            var level = 0
+            if tokens > 0 {
+                let ratio = Double(tokens) / Double(maxTokens)
+                if ratio >= 0.75 { level = 4 }
+                else if ratio >= 0.5 { level = 3 }
+                else if ratio >= 0.25 { level = 2 }
+                else { level = 1 }
             }
+            heatmap.append(HeatDay(date: cursor, tokens: tokens, level: level))
+            cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? startOfToday.addingTimeInterval(1)
         }
         dashboard.heatmap = heatmap
         
@@ -249,90 +282,183 @@ final class MonitoringViewModel {
     }
     
     private enum Period { case day, week, month }
-    
-    private func buildPeriodReport(entries: [UsageEntry], period: Period) -> PeriodReport {
+
+    private typealias PeriodWindow = (currentStart: Date, currentEnd: Date, previousStart: Date, previousEnd: Date)
+
+    private func entries(in entries: [UsageEntry], from start: Date, to end: Date) -> [UsageEntry] {
+        entries.filter { $0.timestamp >= start && $0.timestamp < end }
+    }
+
+    private func periodRange(for period: Period, now: Date, calendar: Calendar) -> PeriodWindow {
+        let startOfToday = calendar.startOfDay(for: now)
+
+        switch period {
+        case .day:
+            let next = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? now
+            let previous = calendar.date(byAdding: .day, value: -1, to: startOfToday) ?? now.addingTimeInterval(-86400)
+            return (startOfToday, next, previous, startOfToday)
+
+        case .week:
+            let daysFromMonday = (calendar.component(.weekday, from: startOfToday) + 5) % 7
+            let start = calendar.date(byAdding: .day, value: -daysFromMonday, to: startOfToday) ?? startOfToday
+            let next = calendar.date(byAdding: .day, value: 7, to: start) ?? now
+            let previous = calendar.date(byAdding: .day, value: -7, to: start) ?? now.addingTimeInterval(-86400 * 7)
+            return (start, next, previous, start)
+
+        case .month:
+            let components = calendar.dateComponents([.year, .month], from: now)
+            let start = calendar.date(from: components) ?? startOfToday
+            let next = calendar.date(byAdding: .month, value: 1, to: start) ?? now
+            let previous = calendar.date(byAdding: .month, value: -1, to: start) ?? now.addingTimeInterval(-86400 * 30)
+            return (start, next, previous, start)
+        }
+    }
+
+    private func buildPeriodReport(
+        entries: [UsageEntry],
+        previousEntries: [UsageEntry],
+        period: Period,
+        now: Date,
+        installedMcpServers: Int,
+        installedSkills: Int
+    ) -> PeriodReport {
         var report = PeriodReport()
         var metrics = Metrics()
-        metrics.totalTokens = entries.reduce(0) { $0 + $1.inputTokens + $1.outputTokens + $1.cacheReadTokens + $1.cacheCreationTokens }
+        metrics.totalTokens = totalTokens(in: entries)
         metrics.inputTokens = entries.reduce(0) { $0 + $1.inputTokens }
         metrics.cacheTokens = entries.reduce(0) { $0 + $1.cacheReadTokens + $1.cacheCreationTokens }
         metrics.outputTokens = entries.reduce(0) { $0 + $1.outputTokens }
         metrics.cost = entries.reduce(0) { $0 + $1.costUsd }
-        metrics.requests = entries.count
-        
-        // 计算 sessions (简单按 messageId 聚合)
-        let sessions = Set(entries.map { $0.messageId }).count
-        metrics.sessions = sessions
+        metrics.mcpCalls = entries.reduce(0) { $0 + $1.mcpServers.count }
+        metrics.skillCalls = entries.reduce(0) { $0 + $1.skills.count }
+        metrics.requests = entries.filter { !$0.model.isEmpty }.count
+        metrics.sessions = Set(entries.map(\.sessionId).filter { !$0.isEmpty }).count
+        metrics.deltaTokens = pctDelta(current: Double(metrics.totalTokens), previous: Double(totalTokens(in: previousEntries)))
+        metrics.deltaCost = pctDelta(current: metrics.cost, previous: previousEntries.reduce(0) { $0 + $1.costUsd })
+        metrics.servers = installedMcpServers
+        metrics.skills = installedSkills
         report.metrics = metrics
         
         // 聚合模型
         let donutPalette: [Color] = [.green, .mint, .teal, .cyan, .blue, .indigo, .purple]
         var modelDict: [String: (tokens: Int, cost: Double)] = [:]
         for entry in entries {
-            let m = entry.model.isEmpty ? "unknown" : entry.model
+            guard !entry.model.isEmpty else { continue }
+            let m = normalizeModelName(entry.model)
             let cur = modelDict[m] ?? (0, 0.0)
-            modelDict[m] = (cur.tokens + entry.inputTokens + entry.outputTokens + entry.cacheReadTokens, cur.cost + entry.costUsd)
+            modelDict[m] = (cur.tokens + totalTokens(in: entry), cur.cost + entry.costUsd)
         }
         var models = modelDict.map { k, v in ModelStat(name: k, tokens: v.tokens, cost: v.cost, color: .gray) }
-        models.sort { $0.cost > $1.cost }
+        models.sort { $0.tokens > $1.tokens }
         for i in 0..<models.count {
             models[i].color = i < donutPalette.count ? donutPalette[i] : .gray
         }
         report.models = models
-        
-        // Series & Trend
+
+        report.mcp = namedCounts(from: entries.flatMap(\.mcpServers))
+        report.skills = namedCounts(from: entries.flatMap(\.skills))
+
         let calendar = Calendar.current
-        var seriesDict: [String: (label: String, full: String, input: Int, cache: Int, output: Int, date: Date)] = [:]
-        
+        let range = periodRange(for: period, now: now, calendar: calendar)
+        var buckets = makeEmptyBuckets(for: period, start: range.currentStart, end: range.currentEnd, calendar: calendar)
+
         for entry in entries {
-            let label: String
-            let full: String
-            let groupDate: Date
-            
-            switch period {
-            case .day:
-                // 按小时
-                let comps = calendar.dateComponents([.year, .month, .day, .hour], from: entry.timestamp)
-                groupDate = calendar.date(from: comps)!
-                label = "\(comps.hour!)h"
-                full = "\(comps.month!)/\(comps.day!) \(comps.hour!):00"
-            case .week:
-                let start = calendar.startOfDay(for: entry.timestamp)
-                groupDate = start
-                let comps = calendar.dateComponents([.month, .day], from: start)
-                let weekdayIndex = calendar.component(.weekday, from: start) - 1
-                label = calendar.shortWeekdaySymbols[weekdayIndex]
-                full = "\(comps.month!)/\(comps.day!)"
-            case .month:
-                // 按天
-                let start = calendar.startOfDay(for: entry.timestamp)
-                groupDate = start
-                let comps = calendar.dateComponents([.month, .day], from: start)
-                label = "\(comps.month!)/\(comps.day!)"
-                full = label
+            guard let index = bucketIndex(for: entry.timestamp, period: period, start: range.currentStart, calendar: calendar),
+                  buckets.indices.contains(index) else { continue }
+            buckets[index].input += entry.inputTokens
+            buckets[index].cache += entry.cacheReadTokens + entry.cacheCreationTokens
+            buckets[index].output += entry.outputTokens
+            buckets[index].cost += entry.costUsd
+            if !entry.model.isEmpty {
+                buckets[index].requests += 1
             }
-            
-            let key = full
-            let cur = seriesDict[key] ?? (label, full, 0, 0, 0, groupDate)
-            seriesDict[key] = (
-                label,
-                full,
-                cur.input + entry.inputTokens,
-                cur.cache + entry.cacheReadTokens + entry.cacheCreationTokens,
-                cur.output + entry.outputTokens,
-                groupDate
-            )
         }
-        
-        report.series = seriesDict.values.sorted { $0.date < $1.date }.map {
+
+        report.series = buckets.map {
             SeriesPoint(label: $0.label, full: $0.full, input: $0.input, cache: $0.cache, output: $0.output)
         }
-        
-        // 简单趋势线 (Sparkline) - 使用 cost 和 request 的滑动聚合
-        report.costTrend = report.series.map { Double($0.input + $0.cache + $0.output) } // mock cost trend by tokens for now
-        report.reqTrend = report.series.map { Double($0.input) } // mock req trend
+        report.costTrend = buckets.map { $0.cost }
+        report.reqTrend = buckets.map { Double($0.requests) }
         
         return report
+    }
+
+    private typealias Bucket = (label: String, full: String, input: Int, cache: Int, output: Int, requests: Int, cost: Double)
+
+    private func makeEmptyBuckets(for period: Period, start: Date, end: Date, calendar: Calendar) -> [Bucket] {
+        switch period {
+        case .day:
+            return (0..<24).map { hour in
+                let label = hour % 4 == 0 && hour != 0 ? String(format: "%02d", hour) : ""
+                return (label, String(format: "%02d:00", hour), 0, 0, 0, 0, 0)
+            }
+
+        case .week:
+            let weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            return (0..<7).map { index in
+                let date = calendar.date(byAdding: .day, value: index, to: start) ?? start
+                let components = calendar.dateComponents([.month, .day], from: date)
+                let full = "\(weekdays[index]) \(monthName(components.month ?? 1)) \(components.day ?? index + 1)"
+                return (weekdays[index], full, 0, 0, 0, 0, 0)
+            }
+
+        case .month:
+            let days = max(1, calendar.dateComponents([.day], from: start, to: end).day ?? 30)
+            let month = calendar.component(.month, from: start)
+            return (0..<days).map { index in
+                let day = index + 1
+                let label = index == 0 || day % 5 == 0 ? "\(day)" : ""
+                return (label, "\(monthName(month)) \(day)", 0, 0, 0, 0, 0)
+            }
+        }
+    }
+
+    private func bucketIndex(for date: Date, period: Period, start: Date, calendar: Calendar) -> Int? {
+        switch period {
+        case .day:
+            return calendar.component(.hour, from: date)
+        case .week:
+            let startOfDay = calendar.startOfDay(for: date)
+            return calendar.dateComponents([.day], from: start, to: startOfDay).day
+        case .month:
+            return calendar.component(.day, from: date) - 1
+        }
+    }
+
+    private func totalTokens(in entries: [UsageEntry]) -> Int {
+        entries.reduce(0) { $0 + totalTokens(in: $1) }
+    }
+
+    private func totalTokens(in entry: UsageEntry) -> Int {
+        entry.inputTokens + entry.outputTokens + entry.cacheReadTokens + entry.cacheCreationTokens
+    }
+
+    private func pctDelta(current: Double, previous: Double) -> Double {
+        guard previous > 0 else { return 0 }
+        return ((current - previous) / previous * 10_000).rounded() / 100
+    }
+
+    private func namedCounts(from names: [String]) -> [NamedCount] {
+        var counts: [String: Int] = [:]
+        for name in names where !name.isEmpty {
+            counts[name, default: 0] += 1
+        }
+        return counts.map { NamedCount(name: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
+    }
+
+    private func normalizeModelName(_ model: String) -> String {
+        guard let lastDash = model.lastIndex(of: "-") else { return model }
+        let suffix = model[model.index(after: lastDash)...]
+        if suffix.count == 8, suffix.allSatisfy({ $0.isNumber }) {
+            return String(model[..<lastDash])
+        }
+        return model
+    }
+
+    private func monthName(_ month: Int) -> String {
+        let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        guard month >= 1 && month <= 12 else { return "" }
+        return months[month - 1]
     }
 
     private func startAutoRefresh() {

@@ -86,12 +86,29 @@ struct Theme {
 struct StatusBarView: View {
     @Environment(MonitoringViewModel.self) private var viewModel
     @Environment(\.colorScheme) private var colorScheme
-    var theme: Theme { Theme(isDark: colorScheme == .dark) }
+    @AppStorage("tokenscopeThemeMode") private var themeMode = "system"
+    var theme: Theme { Theme(isDark: effectiveColorScheme == .dark) }
     @State private var selectedPeriod: Int = 1 // 0: Day, 1: Week, 2: Month
     @State private var showingSettings = false
     
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
+
+    private var preferredColorScheme: ColorScheme? {
+        switch themeMode {
+        case "dark": return .dark
+        case "light": return .light
+        default: return nil
+        }
+    }
+
+    private var effectiveColorScheme: ColorScheme {
+        switch themeMode {
+        case "dark": return .dark
+        case "light": return .light
+        default: return colorScheme
+        }
+    }
     
     private var currentReport: PeriodReport {
         let dashboard = viewModel.monitoringData.dashboard
@@ -106,75 +123,73 @@ struct StatusBarView: View {
     private var trendSubtitle: String {
         switch selectedPeriod {
         case 0: return "today"
-        case 1: return "this week"
+        case 1: return "last 7 days"
         default: return "this month"
         }
     }
     
     var body: some View {
-        if showingSettings {
-            SettingsView { showingSettings = false }
-        } else {
-            mainView
+        Group {
+            if showingSettings {
+                SettingsView { showingSettings = false }
+            } else {
+                mainView
+            }
         }
+        .preferredColorScheme(preferredColorScheme)
     }
     
     private var mainView: some View {
-        ZStack {
-            theme.bg
+        VStack(spacing: 0) {
+            headerSection
 
-            VStack(spacing: 0) {
-                headerSection
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 14) {
+                    heroSection
+                    splitBarSection
+                    barChartSection
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 14) {
-                        heroSection
-                        splitBarSection
-                        barChartSection
+                    sectionDivider
+                    tokensByModelSection
 
+                    sectionDivider
+                    costByModelSection
+
+                    sectionDivider
+                    trendCardsSection
+
+                    if settings.showProjectSection && currentReport.metrics.servers > 0 {
                         sectionDivider
-                        tokensByModelSection
-
-                        sectionDivider
-                        costByModelSection
-
-                        sectionDivider
-                        trendCardsSection
-
-                        if settings.showProjectSection {
-                            sectionDivider
-                            projectsSection
-                        }
-
-                        if settings.showRecentSection {
-                            sectionDivider
-                            recentSection
-                        }
-
-                        sectionDivider
-                        heatmapSection
-
-                        bottomBar
+                        projectsSection
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+
+                    if settings.showRecentSection && currentReport.metrics.skills > 0 {
+                        sectionDivider
+                        skillsSection
+                    }
+
+                    sectionDivider
+                    heatmapSection
+
+                    bottomBar
                 }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
             }
-            .background(theme.panelBg)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(theme.panelBorder, lineWidth: 1)
-            )
-            .padding(14)
         }
         .frame(width: 400, height: 760)
+        .background(theme.panelBg)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(theme.panelBorder, lineWidth: 1)
+        )
     }
     
     // MARK: - Sections
     
     private var headerSection: some View {
-        HStack {
+        HStack(spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "chart.bar.fill")
                     .font(.system(size: 12, weight: .bold))
@@ -203,10 +218,56 @@ struct StatusBarView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(theme.segBorder, lineWidth: 1)
             )
+
+            HStack(spacing: 6) {
+                headerIconButton(
+                    systemName: effectiveColorScheme == .dark ? "moon.fill" : "sun.max",
+                    help: "Toggle theme",
+                    action: toggleTheme
+                )
+                headerIconButton(
+                    systemName: "camera",
+                    help: "Copy panel snapshot",
+                    action: copyPanelSnapshot
+                )
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 16)
         .padding(.bottom, 10)
+    }
+
+    private func headerIconButton(systemName: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(theme.textSecondary)
+                .frame(width: 28, height: 28)
+                .background(theme.segBg)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(theme.segBorder, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+
+    private func toggleTheme() {
+        themeMode = effectiveColorScheme == .dark ? "light" : "dark"
+    }
+
+    private func copyPanelSnapshot() {
+        guard let contentView = NSApp.keyWindow?.contentView else { return }
+        let bounds = contentView.bounds
+        guard let bitmap = contentView.bitmapImageRepForCachingDisplay(in: bounds) else { return }
+        contentView.cacheDisplay(in: bounds, to: bitmap)
+
+        let image = NSImage(size: bounds.size)
+        image.addRepresentation(bitmap)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.writeObjects([image])
     }
 
     private var sectionDivider: some View {
@@ -233,12 +294,15 @@ struct StatusBarView: View {
                             .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundColor(theme.textSecondary)
                         
+                        let delta = currentReport.metrics.deltaTokens
                         HStack(spacing: 2) {
-                            if currentReport.metrics.totalTokens == 0 {
+                            if delta == 0 {
                                 Text("0%").font(.system(size: 10, weight: .bold))
                             } else {
-                                Image(systemName: "arrowtriangle.up.fill").font(.system(size: 8))
-                                Text("14%").font(.system(size: 10, weight: .bold))
+                                Image(systemName: delta > 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+                                    .font(.system(size: 8))
+                                Text(formatDeltaPercent(delta))
+                                    .font(.system(size: 10, weight: .bold))
                             }
                         }
                         .padding(.horizontal, 6)
@@ -524,97 +588,111 @@ struct StatusBarView: View {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(theme.textSecondary)
                 Spacer()
-                let total = currentReport.projects.reduce(0) { $0 + $1.count }
-                Text("\(formatWholeNumber(total)) · \(currentReport.projects.count) servers")
+                Text("\(formatWholeNumber(currentReport.metrics.mcpCalls)) · \(currentReport.metrics.servers) servers")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(theme.textSecondary)
                     .monospacedDigit()
             }
             
-            let projects = currentReport.projects.prefix(5)
-            let maxCount = Double(projects.first?.count ?? 1)
-            
-            ForEach(Array(projects.enumerated()), id: \.element.id) { index, proj in
-                let pct = Double(proj.count) / max(maxCount, 1)
-                HStack(spacing: 8) {
-                    let decoded = proj.name.removingPercentEncoding ?? proj.name
-                    Text(decoded.components(separatedBy: "/").last ?? decoded)
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(theme.textMain)
-                        .frame(width: 112, alignment: .leading)
-                        .lineLimit(1)
-                    
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(theme.track)
-                            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                                .fill(theme.chartGreen)
-                                .frame(width: geo.size.width * CGFloat(pct))
+            if currentReport.mcp.isEmpty {
+                Text("No MCP calls in this period")
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundColor(theme.textSecondary.opacity(0.6))
+            } else {
+                let servers = currentReport.mcp.prefix(5)
+                let maxCount = Double(servers.first?.count ?? 1)
+                
+                ForEach(Array(servers.enumerated()), id: \.element.id) { index, server in
+                    let pct = Double(server.count) / max(maxCount, 1)
+                    HStack(spacing: 8) {
+                        Text(server.name)
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundColor(theme.textMain)
+                            .frame(width: 112, alignment: .leading)
+                            .lineLimit(1)
+                        
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(theme.track)
+                                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                    .fill(theme.chartGreen)
+                                    .frame(width: geo.size.width * CGFloat(pct))
+                            }
                         }
+                        .frame(height: 5)
+                        
+                        Text(formatCompactCount(server.count))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(theme.textSecondary)
+                            .frame(width: 42, alignment: .trailing)
+                            .monospacedDigit()
                     }
-                    .frame(height: 5)
-                    
-                    Text(formatCompactCount(proj.count))
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(theme.textSecondary)
-                        .frame(width: 42, alignment: .trailing)
-                        .monospacedDigit()
+                    .help(server.name)
                 }
-                .help(proj.name)
-            }
 
-            if currentReport.projects.count > 5 {
-                Text("+\(currentReport.projects.count - 5) more")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(theme.textTertiary)
+                if currentReport.mcp.count > 5 {
+                    Text("+\(currentReport.mcp.count - 5) more")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(theme.textTertiary)
+                }
             }
         }
     }
     
-    private var recentSection: some View {
+    private var skillsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("SKILL CALLS")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(theme.textSecondary)
                 Spacer()
-                let total = viewModel.monitoringData.recentEntries.reduce(0) { $0 + $1.inputTokens + $1.outputTokens }
-                Text("\(formatCompactCount(total)) · \(viewModel.monitoringData.recentEntries.count) latest")
+                Text("\(formatWholeNumber(currentReport.metrics.skillCalls)) · \(currentReport.metrics.skills) skills")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(theme.textSecondary)
                     .monospacedDigit()
             }
             
-            let entries = viewModel.monitoringData.recentEntries.suffix(5).reversed()
-            let maxTokens = entries.map { $0.inputTokens + $0.outputTokens }.max() ?? 1
-            
-            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                let tokens = entry.inputTokens + entry.outputTokens
-                let pct = Double(tokens) / Double(max(maxTokens, 1))
-                HStack(spacing: 8) {
-                    Text(shortModelName(entry.model))
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(theme.textMain)
-                        .frame(width: 112, alignment: .leading)
-                        .lineLimit(1)
-                    
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(theme.track)
-                            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                                .fill(theme.lightGreen)
-                                .frame(width: geo.size.width * CGFloat(pct))
+            if currentReport.skills.isEmpty {
+                Text("No skill calls in this period")
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundColor(theme.textSecondary.opacity(0.6))
+            } else {
+                let skills = currentReport.skills.prefix(5)
+                let maxCount = Double(skills.first?.count ?? 1)
+                
+                ForEach(Array(skills.enumerated()), id: \.element.id) { index, skill in
+                    let pct = Double(skill.count) / Double(max(maxCount, 1))
+                    HStack(spacing: 8) {
+                        Text(skill.name)
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundColor(theme.textMain)
+                            .frame(width: 112, alignment: .leading)
+                            .lineLimit(1)
+                        
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(theme.track)
+                                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                    .fill(theme.lightGreen)
+                                    .frame(width: geo.size.width * CGFloat(pct))
+                            }
                         }
+                        .frame(height: 5)
+                        
+                        Text(formatCompactCount(skill.count))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(theme.textSecondary)
+                            .frame(width: 42, alignment: .trailing)
+                            .monospacedDigit()
                     }
-                    .frame(height: 5)
-                    
-                    Text(formatCompactCount(tokens))
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(theme.textSecondary)
-                        .frame(width: 42, alignment: .trailing)
-                        .monospacedDigit()
+                    .help(skill.name)
                 }
-                .help("\(entry.model) · \(formatWholeNumber(tokens)) tokens")
+
+                if currentReport.skills.count > 5 {
+                    Text("+\(currentReport.skills.count - 5) more")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(theme.textTertiary)
+                }
             }
         }
     }
@@ -734,6 +812,14 @@ struct StatusBarView: View {
             return String(format: "%.0fK", Double(count) / 1_000)
         }
         return "\(count)"
+    }
+
+    private func formatDeltaPercent(_ value: Double) -> String {
+        let absValue = abs(value)
+        if absValue >= 10 {
+            return String(format: "%.0f%%", absValue)
+        }
+        return String(format: "%.1f%%", absValue)
     }
 
     private func formatWholeNumber(_ count: Int) -> String {
