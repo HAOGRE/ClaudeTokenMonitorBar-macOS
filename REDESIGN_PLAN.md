@@ -22,8 +22,9 @@ TokenScope 的 UI 以其精美的配色、紧凑的数据展示和直观的图�
     *   右侧 **Est. cost** 估算成本，使用带强调色的粗体数字。
 3.  **分色进度条 (Input/Output Split Bar)**:
     *   一根双色无缝进度条直观展示 Input（含 Cache）与 Output 占比，下方紧接文字图例。
-4.  **图表模块 (Charts)**:
-    *   **Bar Chart**: 每日消耗的堆叠柱状图（下方颜色为 Input，上方为 Output）。
+4.  **图表模块 (Charts) [替换原 30天趋势图]**:
+    *   **弃用旧版 30天趋势图**：原有的单一 30天柱状图与新功能重叠，将被彻底移除。
+    *   **Bar Chart (分段柱状图)**：支持动态切换 Day/Week/Month 的堆叠柱状图（下方颜色为 Input，上方为 Output）。
     *   **Tokens by model (条形列表)**: 1:1 还原各模型的消耗占比长条和百分比。
     *   **Cost by model (甜甜圈图)**: 右侧模型列表，左侧带中空总计数值的连续圆环图，带 Hover 焦点高亮。
 5.  **数据看板 (Mini Stats)**:
@@ -31,7 +32,19 @@ TokenScope 的 UI 以其精美的配色、紧凑的数据展示和直观的图�
 6.  **活动热力图 (Heatmap)**:
     *   底部的 7xN 方块阵列，带 Less/More 的五级颜色深浅图例。
 
-## 3. 数据结构设计与变更 (Data Structure Changes)
+## 3. 原有特色功能与模块化 (Legacy Features & Modularity)
+为了不丢失 ClaudeTokenMonitor 本身的实用价值，新设计将在 TokenScope 外观下完美融入原有特色：
+
+1.  **实时速率监控 (Real-time RateBar)**：
+    *   **位置**：放置在英雄区 (Hero Section) 和分色进度条之间。
+    *   **设计**：采用 TokenScope 的无边框微底色卡片（例如深色模式下的 `rgba(255,255,255,0.06)`），配合 `.monospaced` 字体。当有数据流时，相应的数值亮起主题色并伴随微弱的呼吸动画。
+2.  **v4 官方限制状态 (v4 Limits)**：
+    *   **位置**：放置在实时速率或图表区下方，作为一个精致的 TokenScope 风格警告卡片（带小圆角进度条）。
+3.  **完全的模块化管理 (Modular Toggles)**：
+    *   除“30天趋势图”外，原有的 `AppSettings` 模块化开关将被 **100% 保留**。
+    *   用户依然可以在设置中自由开启或关闭：项目成本区 (Project)、最近记录区 (Recent)、以及新加入的热力图 (Heatmap) 等。即使关闭某些模块，整体的流式布局依然会自适应收缩，保持美观。
+
+## 4. 数据结构设计与变更 (Data Structure Changes)
 为了能够 1:1 驱动这套新 UI，目前的 `MonitoringData` 需要大幅扩充，向 `tokenscope/src/data.ts` 的模型靠拢：
 
 **变更 1: 引入周期性报表聚合 (PeriodReport)**
