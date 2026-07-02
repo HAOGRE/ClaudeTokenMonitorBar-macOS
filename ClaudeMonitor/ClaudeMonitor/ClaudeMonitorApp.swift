@@ -42,16 +42,9 @@ private struct MenuBarLabel: View {
 
     var body: some View {
         let rate = viewModel.tokenRate
-        if rate.hasActivity {
-            // 有活动：双行速率
-            let rate1 = MonitoringViewModel.formatRate(rate.inputPerSec)
-            let rate2 = MonitoringViewModel.formatRate(rate.outputPerSec)
-            Image(nsImage: makeMenuBarImage(rate1: rate1, rate2: rate2))
-        } else {
-            // 无活动：单行显示总成本
-            let cost = MonitoringViewModel.formatCost(viewModel.monitoringData.totalCost)
-            Image(nsImage: makeCostImage(cost: cost))
-        }
+        let rate1 = MonitoringViewModel.formatRate(rate.inputPerSec)
+        let rate2 = MonitoringViewModel.formatRate(rate.outputPerSec)
+        Image(nsImage: makeMenuBarImage(rate1: rate1, rate2: rate2))
     }
 }
 

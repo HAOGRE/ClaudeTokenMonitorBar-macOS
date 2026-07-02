@@ -1,48 +1,99 @@
 import Foundation
 import Observation
 import os.log
+import SwiftUI
+
+// MARK: - 新的 TokenScope 风格数据结构
+
+struct Metrics {
+    var totalTokens: Int = 0
+    var inputTokens: Int = 0
+    var cacheTokens: Int = 0
+    var outputTokens: Int = 0
+    var cost: Double = 0
+    var requests: Int = 0
+    var sessions: Int = 0
+    var deltaTokens: Double = 0 // pct
+}
+
+struct ModelStat: Identifiable {
+    var id: String { name }
+    var name: String
+    var vendor: String = "Anthropic"
+    var tokens: Int = 0
+    var cost: Double = 0
+    var color: Color = .green
+    var priced: Bool = true
+}
+
+struct NamedCount: Identifiable {
+    var id: String { name }
+    var name: String
+    var count: Int
+}
+
+struct SeriesPoint: Identifiable {
+    var id: String { label }
+    var label: String
+    var full: String
+    var input: Int
+    var cache: Int
+    var output: Int
+}
+
+struct HeatDay: Identifiable {
+    var id: Date { date }
+    var date: Date
+    var tokens: Int
+    var level: Int
+}
+
+struct PeriodReport {
+    var metrics: Metrics = Metrics()
+    var series: [SeriesPoint] = []
+    var models: [ModelStat] = []
+    var projects: [NamedCount] = []
+    var reqTrend: [Double] = []
+    var costTrend: [Double] = []
+    
+    static var empty: PeriodReport { PeriodReport() }
+}
+
+struct Dashboard {
+    var day: PeriodReport = .empty
+    var week: PeriodReport = .empty
+    var month: PeriodReport = .empty
+    var heatmap: [HeatDay] = []
+    
+    static var empty: Dashboard { Dashboard() }
+}
 
 // MARK: - 监控数据 Model
 
 struct MonitoringData {
-    var totalCost: Double = 0
-    var totalInputTokens: Int = 0
-    var totalOutputTokens: Int = 0
-    var totalCacheReadTokens: Int = 0
-    // 今日统计
-    var todayCost: Double = 0
-    var todayInputTokens: Int = 0
-    var todayOutputTokens: Int = 0
-    var todayCacheReadTokens: Int = 0
-    var projectCosts: [String: Double] = [:]
-    var modelDistribution: [String: Int] = [:]
-    var recentEntries: [UsageEntry] = []
+    var dashboard: Dashboard = .empty
     var lastUpdated: Date = Date()
-    
-    // V4 状态协议数据
     var v4State: V4StateProtocol? = nil
-
+    var recentEntries: [UsageEntry] = []
+    
     static var empty: MonitoringData { MonitoringData() }
 }
 
 // MARK: - Token 速率（每秒增量）
 
 struct TokenRate {
-    /// 输入 token/s（对应"上行"：你发给 Claude 的）
     var inputPerSec: Double = 0
-    /// 输出 token/s（对应"下行"：Claude 回复你的）
     var outputPerSec: Double = 0
-
     var hasActivity: Bool { inputPerSec > 0 || outputPerSec > 0 }
 }
 
 // MARK: - 后台加载结果
 
 private struct LoadResult: Sendable {
-    let stats: UsageStatistics
-    let todayStats: UsageStatistics
-    let projects: [String: UsageStatistics]
-    let dailyData: [Date: UsageStatistics]
+    let allEntries: [UsageEntry]
+    let todayEntries: [UsageEntry]
+    let projectEntries: [String: [UsageEntry]]
+    let dailyEntries: [Date: [UsageEntry]]
 }
 
 // MARK: - 监控视图模型
@@ -54,27 +105,22 @@ final class MonitoringViewModel {
     var tokenRate: TokenRate = TokenRate()
     var isLoading = false
     var errorMessage: String?
-    /// 30天每日历史，用于柱状图
-    var dailyHistory: [(day: Date, cost: Double, tokens: Int)] = []
-
+    
     private let logger = Logger(subsystem: "com.haogre.claudetokenmonitor", category: "viewmodel")
     private let tokenReader = TokenDataReader()
     private let stateReader = StateProtocolReader()
     nonisolated(unsafe) private var autoRefreshTask: Task<Void, Never>?
 
-    /// 重置日期（持久化到 UserDefaults）
     private var resetDate: Date? {
         get { UserDefaults.standard.object(forKey: "statsResetDate") as? Date }
         set { UserDefaults.standard.set(newValue, forKey: "statsResetDate") }
     }
 
-    // 上一次采样的数据（用于计算速率）
     private var lastSampleInput: Int = 0
     private var lastSampleOutput: Int = 0
     private var lastSampleTime: Date = Date()
     private var isFirstLoad = true
 
-    // 速率平滑：保留最近 N 个采样做滑动平均
     private var inputHistory: [Double] = []
     private var outputHistory: [Double] = []
     private let historySize = 5
@@ -83,12 +129,8 @@ final class MonitoringViewModel {
         startAutoRefresh()
     }
 
-    // MARK: - 数据加载
-
     func refreshData() {
-        Task {
-            await loadData()
-        }
+        Task { await loadData() }
     }
 
     private func loadData() async {
@@ -99,38 +141,37 @@ final class MonitoringViewModel {
         let reader = tokenReader
         let stateR = stateReader
         let capturedResetDate = resetDate
+        
         let (result, state) = await Task.detached(priority: .userInitiated) {
             let v4State = await stateR.readState()
-            let allData = reader.loadAllData(since: capturedResetDate, daysBack: 30)
-            let stats      = UsageStatistics(entries: allData.allEntries)
-            let todayStats = UsageStatistics(entries: allData.todayEntries)
-            let projects   = allData.projectEntries.mapValues { UsageStatistics(entries: $0) }
-            let dailyData  = allData.dailyEntries.mapValues  { UsageStatistics(entries: $0) }
-            return (LoadResult(stats: stats, todayStats: todayStats, projects: projects, dailyData: dailyData), v4State)
+            // 加载最多90天的数据以便生成热力图
+            let allData = reader.loadAllData(since: capturedResetDate, daysBack: 90)
+            return (LoadResult(allEntries: allData.allEntries, todayEntries: allData.todayEntries, projectEntries: allData.projectEntries, dailyEntries: allData.dailyEntries), v4State)
         }.value
 
-        updateMonitoringData(from: result.stats, todayStats: result.todayStats, projectData: result.projects, dailyData: result.dailyData, v4State: state)
+        updateMonitoringData(from: result, v4State: state)
 
-        if result.stats.entries.isEmpty && state == nil {
+        if result.allEntries.isEmpty && state == nil {
             errorMessage = "未找到数据，请检查本地用量数据目录访问权限"
         }
 
         isLoading = false
     }
 
-    private func updateMonitoringData(from stats: UsageStatistics, todayStats: UsageStatistics, projectData: [String: UsageStatistics], dailyData: [Date: UsageStatistics], v4State: V4StateProtocol?) {
+    private func updateMonitoringData(from result: LoadResult, v4State: V4StateProtocol?) {
         let now = Date()
-        let newInput = stats.totalInputTokens
-        let newOutput = stats.totalOutputTokens
-
-        // 计算速率（跳过首次加载避免虚假峰值）
+        let calendar = Calendar.current
+        
+        // 计算速率
+        let totalInput = result.allEntries.reduce(0) { $0 + $1.inputTokens + $1.cacheReadTokens }
+        let totalOutput = result.allEntries.reduce(0) { $0 + $1.outputTokens }
+        
         if !isFirstLoad {
             let elapsed = now.timeIntervalSince(lastSampleTime)
             if elapsed > 0 {
-                let rawInputRate = Double(max(0, newInput - lastSampleInput)) / elapsed
-                let rawOutputRate = Double(max(0, newOutput - lastSampleOutput)) / elapsed
+                let rawInputRate = Double(max(0, totalInput - lastSampleInput)) / elapsed
+                let rawOutputRate = Double(max(0, totalOutput - lastSampleOutput)) / elapsed
 
-                // 滑动平均平滑
                 inputHistory.append(rawInputRate)
                 outputHistory.append(rawOutputRate)
                 if inputHistory.count > historySize { inputHistory.removeFirst() }
@@ -146,40 +187,145 @@ final class MonitoringViewModel {
         } else {
             isFirstLoad = false
         }
-
-        lastSampleInput = newInput
-        lastSampleOutput = newOutput
+        lastSampleInput = totalInput
+        lastSampleOutput = totalOutput
         lastSampleTime = now
 
-        var updated = MonitoringData()
-        updated.totalCost = stats.totalCost
-        updated.totalInputTokens = newInput
-        updated.totalOutputTokens = newOutput
-        updated.totalCacheReadTokens = stats.totalCacheReadTokens
-        updated.todayCost = todayStats.totalCost
-        updated.todayInputTokens = todayStats.totalInputTokens
-        updated.todayOutputTokens = todayStats.totalOutputTokens
-        updated.todayCacheReadTokens = todayStats.totalCacheReadTokens
-        updated.modelDistribution = stats.modelDistribution
-        updated.recentEntries = Array(stats.entries.suffix(5))
-        updated.lastUpdated = now
-        updated.projectCosts = projectData.mapValues { $0.totalCost }
-        updated.v4State = v4State
-
-        // 如果 v4 状态提供了更权威的全部消耗，可覆盖（根据需求，这里我们主要保留官方数据作参考或限额显示，所以优先使用底层计算的今日消费等）
-        if let state = v4State, let history = state.local_history, let tCost = history.total_cost_usd, tCost > 0 {
-            updated.totalCost = tCost
+        // 构建 Dashboard
+        var dashboard = Dashboard()
+        dashboard.day = buildPeriodReport(entries: result.allEntries.filter { now.timeIntervalSince($0.timestamp) <= 86400 }, period: .day)
+        dashboard.week = buildPeriodReport(entries: result.allEntries.filter { now.timeIntervalSince($0.timestamp) <= 86400 * 7 }, period: .week)
+        dashboard.month = buildPeriodReport(entries: result.allEntries.filter { now.timeIntervalSince($0.timestamp) <= 86400 * 30 }, period: .month)
+        
+        // 项目聚合放入全局或随期间，为了性能，我们将全局项目放入 month，或者按实际 entries 聚合
+        // 此处直接聚合 allEntries 为项目
+        var projects: [String: Int] = [:]
+        for (proj, entries) in result.projectEntries {
+            projects[proj] = entries.reduce(0) { $0 + $1.inputTokens + $1.outputTokens }
         }
+        let projectList = projects.map { NamedCount(name: $0.key, count: $0.value) }.sorted { $0.count > $1.count }
+        
+        dashboard.day.projects = projectList
+        dashboard.week.projects = projectList
+        dashboard.month.projects = projectList
 
-        dailyHistory = dailyData
-            .sorted { $0.key < $1.key }
-            .map { (day: $0.key, cost: $0.value.totalCost, tokens: $0.value.totalInputTokens + $0.value.totalOutputTokens) }
-
+        // 构建 Heatmap
+        var heatmapMap: [Date: Int] = [:]
+        for entry in result.allEntries {
+            let start = calendar.startOfDay(for: entry.timestamp)
+            heatmapMap[start, default: 0] += (entry.inputTokens + entry.outputTokens)
+        }
+        
+        let startOfToday = calendar.startOfDay(for: now)
+        let heatmapDaysCount = 12 * 7 // 过去 12 周
+        var heatmap: [HeatDay] = []
+        
+        // 找出最大的 tokens 用于计算 level (0-4)
+        let maxTokens = heatmapMap.values.max() ?? 1
+        
+        for i in (0..<heatmapDaysCount).reversed() {
+            if let date = calendar.date(byAdding: .day, value: -i, to: startOfToday) {
+                let tokens = heatmapMap[date] ?? 0
+                var level = 0
+                if tokens > 0 {
+                    let ratio = Double(tokens) / Double(maxTokens)
+                    if ratio > 0.75 { level = 4 }
+                    else if ratio > 0.5 { level = 3 }
+                    else if ratio > 0.25 { level = 2 }
+                    else { level = 1 }
+                }
+                heatmap.append(HeatDay(date: date, tokens: tokens, level: level))
+            }
+        }
+        dashboard.heatmap = heatmap
+        
+        var updated = MonitoringData()
+        updated.dashboard = dashboard
+        updated.lastUpdated = now
+        updated.v4State = v4State
+        updated.recentEntries = Array(result.allEntries.suffix(5))
+        
         monitoringData = updated
-        logger.info("速率: ↑\(String(format: "%.1f", self.tokenRate.inputPerSec))/s ↓\(String(format: "%.1f", self.tokenRate.outputPerSec))/s")
     }
-
-    // MARK: - 自动刷新
+    
+    private enum Period { case day, week, month }
+    
+    private func buildPeriodReport(entries: [UsageEntry], period: Period) -> PeriodReport {
+        var report = PeriodReport()
+        var metrics = Metrics()
+        metrics.totalTokens = entries.reduce(0) { $0 + $1.inputTokens + $1.outputTokens + $1.cacheReadTokens + $1.cacheCreationTokens }
+        metrics.inputTokens = entries.reduce(0) { $0 + $1.inputTokens }
+        metrics.cacheTokens = entries.reduce(0) { $0 + $1.cacheReadTokens + $1.cacheCreationTokens }
+        metrics.outputTokens = entries.reduce(0) { $0 + $1.outputTokens }
+        metrics.cost = entries.reduce(0) { $0 + $1.costUsd }
+        metrics.requests = entries.count
+        
+        // 计算 sessions (简单按 messageId 聚合)
+        let sessions = Set(entries.map { $0.messageId }).count
+        metrics.sessions = sessions
+        report.metrics = metrics
+        
+        // 聚合模型
+        let donutPalette: [Color] = [.green, .mint, .teal, .cyan, .blue, .indigo, .purple]
+        var modelDict: [String: (tokens: Int, cost: Double)] = [:]
+        for entry in entries {
+            let m = entry.model.isEmpty ? "unknown" : entry.model
+            let cur = modelDict[m] ?? (0, 0.0)
+            modelDict[m] = (cur.tokens + entry.inputTokens + entry.outputTokens + entry.cacheReadTokens, cur.cost + entry.costUsd)
+        }
+        var models = modelDict.map { k, v in ModelStat(name: k, tokens: v.tokens, cost: v.cost, color: .gray) }
+        models.sort { $0.cost > $1.cost }
+        for i in 0..<models.count {
+            models[i].color = i < donutPalette.count ? donutPalette[i] : .gray
+        }
+        report.models = models
+        
+        // Series & Trend
+        let calendar = Calendar.current
+        var seriesDict: [String: (input: Int, cache: Int, output: Int, date: Date)] = [:]
+        
+        for entry in entries {
+            let label: String
+            let full: String
+            let groupDate: Date
+            
+            switch period {
+            case .day:
+                // 按小时
+                let comps = calendar.dateComponents([.year, .month, .day, .hour], from: entry.timestamp)
+                groupDate = calendar.date(from: comps)!
+                label = "\(comps.hour!)h"
+                full = "\(comps.month!)/\(comps.day!) \(comps.hour!):00"
+            case .week, .month:
+                // 按天
+                let start = calendar.startOfDay(for: entry.timestamp)
+                groupDate = start
+                let comps = calendar.dateComponents([.month, .day], from: start)
+                label = "\(comps.month!)/\(comps.day!)"
+                full = label
+            }
+            
+            let key = label
+            let cur = seriesDict[key] ?? (0, 0, 0, groupDate)
+            seriesDict[key] = (cur.input + entry.inputTokens, cur.cache + entry.cacheReadTokens + entry.cacheCreationTokens, cur.output + entry.outputTokens, groupDate)
+        }
+        
+        report.series = seriesDict.values.sorted { $0.date < $1.date }.map {
+            SeriesPoint(label: "", full: "", input: $0.input, cache: $0.cache, output: $0.output)
+        }
+        // Fix labels
+        let sortedKeys = seriesDict.keys.sorted { seriesDict[$0]!.date < seriesDict[$1]!.date }
+        report.series = sortedKeys.map { k in
+            let v = seriesDict[k]!
+            return SeriesPoint(label: k, full: "", input: v.input, cache: v.cache, output: v.output)
+        }
+        
+        // 简单趋势线 (Sparkline) - 使用 cost 和 request 的滑动聚合
+        report.costTrend = report.series.map { Double($0.input + $0.cache + $0.output) } // mock cost trend by tokens for now
+        report.reqTrend = report.series.map { Double($0.input) } // mock req trend
+        
+        return report
+    }
 
     private func startAutoRefresh() {
         autoRefreshTask?.cancel()
@@ -200,25 +346,8 @@ final class MonitoringViewModel {
         startAutoRefresh()
     }
 
-    // MARK: - 数据查询
-
-    func getTopProjects(limit: Int = 5) -> [(String, Double)] {
-        monitoringData.projectCosts
-            .sorted { $0.value > $1.value }
-            .prefix(limit)
-            .map { ($0.key, $0.value) }
-    }
-
-    func getModelStatistics() -> [(String, Int)] {
-        monitoringData.modelDistribution
-            .sorted { $0.value > $1.value }
-            .map { ($0.key, $0.value) }
-    }
-
-    /// 重置统计起始时间（不删除 JSONL 文件，只过滤显示范围）
     func resetStats() {
         UserDefaults.standard.set(Date(), forKey: "statsResetDate")
-        dailyHistory = []
         monitoringData = .empty
         inputHistory = []
         outputHistory = []
@@ -229,26 +358,21 @@ final class MonitoringViewModel {
         refreshData()
     }
 
-    // MARK: - 格式化工具
-
     static func formatCost(_ cost: Double) -> String {
         String(format: "$%.2f", cost)
     }
 
     static func formatTokens(_ count: Int) -> String {
         if count >= 100_000_000 {
-            // M 值 ≥ 100：显示 M（如 273.5 M）
             return String(format: "%.1f M", Double(count) / 1_000_000)
         } else if count >= 1_000_000 {
-            // M 值 < 100：降级显示精确 K 整数（如 2098 K）
-            return "\(count / 1_000) K"
+            return String(format: "%.2f M", Double(count) / 1_000_000)
         } else if count >= 1_000 {
             return String(format: "%.1f K", Double(count) / 1_000)
         }
         return String(count)
     }
 
-    /// 格式化速率，单位：t/s、Kt/s、Mt/s、Gt/s（以 1000 为基数）
     static func formatRate(_ tokensPerSec: Double) -> String {
         switch tokensPerSec {
         case ..<0.1:
@@ -264,4 +388,3 @@ final class MonitoringViewModel {
         }
     }
 }
-
