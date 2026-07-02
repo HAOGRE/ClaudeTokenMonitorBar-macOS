@@ -139,18 +139,9 @@ struct StatusBarView: View {
             headerSection
 
             ScrollView(.vertical, showsIndicators: false) {
-                // 模块排序按关注度：①Hero ②限额 ③用量图表 为固定模块；其余可在设置中隐藏
+                // 模块排序按关注度：①Hero ②用量图表 为固定模块；其余可在设置中隐藏
                 VStack(spacing: DashboardLayout.sectionSpacing) {
                     heroSection
-
-                    if let limits = viewModel.monitoringData.v4State?.limits,
-                       let fiveHour = limits.five_hour {
-                        v4RateLimitsSection(
-                            fiveHour: fiveHour,
-                            sevenDay: limits.seven_day,
-                            source: viewModel.monitoringData.limitSource
-                        )
-                    }
 
                     splitBarSection
                     barChartSection
@@ -160,7 +151,14 @@ struct StatusBarView: View {
                         modelsSection
                     }
 
-                    if settings.showTrendSection {
+                    if let limits = viewModel.monitoringData.v4State?.limits,
+                       let fiveHour = limits.five_hour {
+                        sectionDivider
+                        limitCardsSection(fiveHour: fiveHour, sevenDay: limits.seven_day)
+                        if settings.showTrendSection {
+                            trendCardsSection
+                        }
+                    } else if settings.showTrendSection {
                         sectionDivider
                         trendCardsSection
                     }
@@ -502,60 +500,35 @@ struct StatusBarView: View {
         }
     }
 
-    private func v4RateLimitsSection(fiveHour: V4LimitDetail, sevenDay: V4LimitDetail?, source: LimitSource) -> some View {
-        let isEstimated = source == .localEstimate
-        let (icon, title): (String, String) = {
-            switch source {
-            case .officialApi:   return ("checkmark.seal.fill", l10n.str(.v4SectionTitleOfficial))
-            case .daemonFile:    return ("shield.checkerboard", l10n.str(.v4SectionTitle))
-            default:             return ("exclamationmark.triangle", l10n.str(.v4SectionTitleEstimated))
-            }
-        }()
-
-        return VStack(spacing: 12) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 13))
-                    .foregroundColor(source == .officialApi ? theme.primaryGreen : (isEstimated ? theme.warning : theme.textSecondary))
-                Text(title)
-                    .sectionTitleFont()
-                    .foregroundColor(theme.textSecondary)
-                Spacer()
-            }
-
-            limitRow(title: l10n.str(.v4FiveHourWindow), detail: fiveHour)
+    private func limitCardsSection(fiveHour: V4LimitDetail, sevenDay: V4LimitDetail?) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            limitMiniCard(title: l10n.str(.v4FiveHourWindow), detail: fiveHour)
             if let sevenDay {
-                limitRow(title: l10n.str(.v4SevenDayWindow), detail: sevenDay)
-            }
-            burnRateFooter(fiveHour: fiveHour)
-
-            if isEstimated {
-                Text(l10n.str(.v4EstimatedDisclaimer))
-                    .font(.system(size: 10))
-                    .foregroundColor(theme.textTertiary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
+                limitMiniCard(title: l10n.str(.v4SevenDayWindow), detail: sevenDay)
             }
         }
-        .padding(12)
-        .background(theme.softCardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
-    private func limitRow(title: String, detail: V4LimitDetail) -> some View {
+    private func limitMiniCard(title: String, detail: V4LimitDetail) -> some View {
         let used = detail.tokens_used ?? 0
         let limit = max(detail.token_limit ?? 1, 1)
         let percentage = detail.used_percentage ?? (Double(used) / Double(limit) * 100)
+        let tint = percentage > 90 ? theme.danger : (percentage > 75 ? theme.warning : theme.primaryGreen)
+        let resetText = detail.resets_at.map { "\(l10n.str(.v4ResetsAt)) \(displayResetsAt($0))" } ?? " "
 
-        return VStack(spacing: 8) {
+        return VStack(alignment: .leading, spacing: 7) {
             HStack {
                 Text(title)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11.5, weight: .semibold))
                     .foregroundColor(theme.textSecondary)
-                Spacer()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                Spacer(minLength: 4)
                 Text("\(String(format: "%.1f", percentage))%")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundColor(percentage > 90 ? theme.danger : (percentage > 75 ? theme.warning : theme.textMain))
+                    .font(.system(size: 12.5, weight: .heavy, design: .monospaced))
+                    .foregroundColor(tint)
+                    .monospacedDigit()
+                    .lineLimit(1)
             }
 
             GeometryReader { geo in
@@ -565,52 +538,25 @@ struct StatusBarView: View {
                         .frame(height: 6)
 
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(percentage > 90 ? theme.danger : (percentage > 75 ? theme.warning : theme.primaryGreen))
+                        .fill(tint)
                         .frame(width: max(0, geo.size.width * CGFloat(min(percentage, 100) / 100)), height: 6)
                 }
             }
             .frame(height: 6)
 
-            if let resetsAt = detail.resets_at {
-                HStack {
-                    Spacer()
-                    Text("\(l10n.str(.v4ResetsAt)) \(displayResetsAt(resetsAt))")
-                        .font(.system(size: 11))
-                        .foregroundColor(theme.textSecondary)
-                }
-            }
-        }
-    }
-
-    private func burnRateFooter(fiveHour: V4LimitDetail) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: "flame")
-                .font(.system(size: 10))
+            Text(resetText)
+                .font(.system(size: 10.5, weight: .medium))
                 .foregroundColor(theme.textSecondary)
-            Text("\(MonitoringViewModel.formatTokens(Int(viewModel.burnRatePerMin))) tok/min")
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(theme.textSecondary)
-            Spacer()
-            if let prediction = predictionText(fiveHour: fiveHour) {
-                Text(prediction)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(prediction == l10n.str(.v4NoHitBeforeReset) ? theme.textSecondary : theme.warning)
-            }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .opacity(detail.resets_at == nil ? 0 : 1)
         }
-    }
-
-    private func predictionText(fiveHour: V4LimitDetail) -> String? {
-        let rate = viewModel.burnRatePerMin
-        guard rate > 0, let limit = fiveHour.token_limit, let used = fiveHour.tokens_used else { return nil }
-        let remaining = limit - used
-        guard remaining > 0 else { return l10n.str(.v4LimitReached) }
-        let predicted = Date().addingTimeInterval(Double(remaining) / rate * 60)
-        if let reset = parseResetsAt(fiveHour.resets_at), predicted > reset {
-            return l10n.str(.v4NoHitBeforeReset)
-        }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return String(format: l10n.str(.v4PredictHit), formatter.string(from: predicted))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(theme.softCardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     /// resets_at 友好化显示：ISO 时间戳转本地时间（今天只显示时刻，跨天带日期）；
@@ -955,6 +901,8 @@ private struct CompactStatCard: View {
                 Text(title)
                     .sectionTitleFont()
                     .foregroundColor(theme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
                 Text(value)
                     .font(.system(size: 19, weight: .heavy, design: .rounded))
                     .foregroundColor(theme.textMain)
@@ -964,6 +912,7 @@ private struct CompactStatCard: View {
                     .foregroundColor(theme.textSecondary)
                     .lineLimit(1)
             }
+            .layoutPriority(1)
 
             Spacer(minLength: 4)
 
@@ -972,6 +921,9 @@ private struct CompactStatCard: View {
                     .font(.system(size: 9, weight: .medium))
                     .foregroundColor(theme.textTertiary)
                     .multilineTextAlignment(.trailing)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .frame(width: 58, alignment: .trailing)
                     .frame(maxHeight: .infinity, alignment: .center)
             } else {
                 VStack(alignment: .trailing, spacing: 3) {
@@ -986,11 +938,12 @@ private struct CompactStatCard: View {
                                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                                 .foregroundColor(theme.textMain)
                                 .monospacedDigit()
+                                .lineLimit(1)
                         }
                         .help(item.name)
                     }
                 }
-                .frame(maxWidth: 80, alignment: .trailing)
+                .frame(width: 58, alignment: .trailing)
             }
         }
         .padding(.horizontal, 11)
