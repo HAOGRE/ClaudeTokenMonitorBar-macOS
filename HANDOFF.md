@@ -79,7 +79,7 @@ f3dbe95 chore: remove obsolete chart display setting
 
 ```bash
 cd ClaudeMonitor
-xcodebuild -project ClaudeMonitor.xcodeproj -scheme ClaudeMonitor -destination 'platform=macOS' build
+xcodebuild -project ClaudeMonitor.xcodeproj -scheme CTMB -destination 'platform=macOS' build
 ```
 
 本轮交接前重新执行过，结果是 `BUILD SUCCEEDED`。
@@ -107,7 +107,7 @@ git pull --ff-only origin feature/ui-redesign
 
 ```bash
 cd ClaudeMonitor
-xcodebuild -project ClaudeMonitor.xcodeproj -scheme ClaudeMonitor -destination 'platform=macOS' build
+xcodebuild -project ClaudeMonitor.xcodeproj -scheme CTMB -destination 'platform=macOS' build
 ```
 
 3. 运行 app 后做一次视觉 smoke test：

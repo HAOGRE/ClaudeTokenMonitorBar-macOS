@@ -41,7 +41,7 @@ private var shortModel: String {
 ### 1.4 构建测试
 ```bash
 cd ClaudeMonitor
-xcodebuild -project ClaudeMonitor.xcodeproj -scheme ClaudeMonitor -destination 'platform=macOS' build
+xcodebuild -project ClaudeMonitor.xcodeproj -scheme CTMB -destination 'platform=macOS' build
 ```
 
 ---
@@ -85,14 +85,14 @@ Source: 官方文档链接
 
 ### 3.1 构建 GitHub 分发版本
 
-使用 **ClaudeMonitor** scheme（非 AppStore 版本）：
+使用 **CTMB** scheme（非 AppStore 版本）：
 
 ```bash
 cd ClaudeMonitor
 
 # 清理并构建 Release 版本
 xcodebuild -project ClaudeMonitor.xcodeproj \
-  -scheme ClaudeMonitor \
+  -scheme CTMB \
   -configuration Release \
   -destination 'platform=macOS' \
   -derivedDataPath './DerivedData' \

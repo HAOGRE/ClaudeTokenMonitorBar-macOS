@@ -1,5 +1,5 @@
 Command line invocation:
-    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ClaudeMonitor.xcodeproj -scheme ClaudeMonitor -destination platform=macOS build
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ClaudeMonitor.xcodeproj -scheme CTMB -destination platform=macOS build
 
 --- xcodebuild: WARNING: Using the first of multiple matching destinations:
 { platform:macOS, arch:arm64, id:00008103-0006741A22DB001E, name:My Mac }
@@ -115,5 +115,5 @@ Copy /Users/haogre/Library/Developer/Xcode/DerivedData/ClaudeMonitor-blvbixxxuzc
 The following build commands failed:
 	SwiftCompile normal arm64 /Users/haogre/github/ClaudeTokenMonitorBar-macOS/ClaudeMonitor/ClaudeMonitor/StatusBarView.swift (in target 'ClaudeMonitor' from project 'ClaudeMonitor')
 	SwiftCompile normal arm64 Compiling\ StatusBarView.swift /Users/haogre/github/ClaudeTokenMonitorBar-macOS/ClaudeMonitor/ClaudeMonitor/StatusBarView.swift (in target 'ClaudeMonitor' from project 'ClaudeMonitor')
-	Building project ClaudeMonitor with scheme ClaudeMonitor
+	Building project ClaudeMonitor with scheme CTMB
 (3 failures)

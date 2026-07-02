@@ -507,11 +507,24 @@ final class MonitoringViewModel {
     }
 
     static func formatCost(_ cost: Double) -> String {
-        String(format: "$%.2f", cost)
+        let sign = cost < 0 ? "-" : ""
+        let amount = abs(cost)
+        if amount >= 1_000_000 {
+            return String(format: "%@$%.2fM", sign, amount / 1_000_000)
+        }
+        if amount >= 10_000 {
+            return String(format: "%@$%.1fK", sign, amount / 1_000)
+        }
+        if amount >= 1_000 {
+            return String(format: "%@$%.2fK", sign, amount / 1_000)
+        }
+        return String(format: "%@$%.2f", sign, amount)
     }
 
     static func formatTokens(_ count: Int) -> String {
-        if count >= 100_000_000 {
+        if count >= 1_000_000_000 {
+            return String(format: "%.2f B", Double(count) / 1_000_000_000)
+        } else if count >= 100_000_000 {
             return String(format: "%.1f M", Double(count) / 1_000_000)
         } else if count >= 1_000_000 {
             return String(format: "%.2f M", Double(count) / 1_000_000)

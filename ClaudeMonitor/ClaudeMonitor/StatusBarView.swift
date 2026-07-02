@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import Charts
 
@@ -97,7 +98,10 @@ struct Theme {
 
 private enum DashboardLayout {
     static let panelWidth: CGFloat = 360
-    static let panelHeight: CGFloat = 760
+    static let panelMinHeight: CGFloat = 360
+    static let panelPreferredMaxHeight: CGFloat = 900
+    static let screenVerticalMargin: CGFloat = 24
+    static let headerFallbackHeight: CGFloat = 51
     static let panelRadius: CGFloat = 18
     static let horizontalPadding: CGFloat = 16
     static let sectionSpacing: CGFloat = 12
@@ -115,6 +119,8 @@ struct StatusBarView: View {
     var theme: Theme { Theme(isDark: colorScheme == .dark) }
     @State private var selectedPeriod: Int = 1 // 0: Day, 1: Week, 2: Month
     @State private var showingSettings = false
+    @State private var measuredHeaderHeight: CGFloat = 0
+    @State private var measuredScrollContentHeight: CGFloat = 0
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
     private var currentReport: PeriodReport {
@@ -125,6 +131,30 @@ struct StatusBarView: View {
         case 2: return dashboard.month
         default: return dashboard.week
         }
+    }
+
+    private var effectiveHeaderHeight: CGFloat {
+        measuredHeaderHeight > 0 ? measuredHeaderHeight : DashboardLayout.headerFallbackHeight
+    }
+
+    private var panelHeight: CGFloat {
+        let fallbackContentHeight = DashboardLayout.panelMinHeight - DashboardLayout.headerFallbackHeight
+        let contentHeight = measuredScrollContentHeight > 0 ? measuredScrollContentHeight : fallbackContentHeight
+        let targetHeight = effectiveHeaderHeight + contentHeight
+        return min(max(targetHeight, DashboardLayout.panelMinHeight), screenBoundedPanelMaxHeight)
+    }
+
+    private var screenBoundedPanelMaxHeight: CGFloat {
+        let visibleHeight = currentScreen?.visibleFrame.height ?? DashboardLayout.panelPreferredMaxHeight
+        let screenBound = max(DashboardLayout.panelMinHeight, visibleHeight - DashboardLayout.screenVerticalMargin)
+        return min(DashboardLayout.panelPreferredMaxHeight, screenBound)
+    }
+
+    private var currentScreen: NSScreen? {
+        let mouseLocation = NSEvent.mouseLocation
+        return NSScreen.screens.first { screen in
+            NSMouseInRect(mouseLocation, screen.frame, false)
+        } ?? NSScreen.main
     }
     
     private var trendSubtitle: String {
@@ -148,6 +178,11 @@ struct StatusBarView: View {
     private var mainView: some View {
         VStack(spacing: 0) {
             headerSection
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: HeaderHeightPreferenceKey.self, value: proxy.size.height)
+                    }
+                )
 
             ScrollView(.vertical, showsIndicators: false) {
                 // 模块排序按关注度：①Hero ②用量图表 为固定模块；其余可在设置中隐藏
@@ -186,15 +221,24 @@ struct StatusBarView: View {
                 }
                 .padding(.horizontal, DashboardLayout.horizontalPadding)
                 .padding(.bottom, DashboardLayout.horizontalPadding)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: ScrollContentHeightPreferenceKey.self, value: proxy.size.height)
+                    }
+                )
             }
+            .frame(height: max(0, panelHeight - effectiveHeaderHeight))
         }
-        .frame(width: DashboardLayout.panelWidth, height: DashboardLayout.panelHeight)
+        .frame(width: DashboardLayout.panelWidth, height: panelHeight)
         .background(theme.panelBg)
         .clipShape(RoundedRectangle(cornerRadius: DashboardLayout.panelRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DashboardLayout.panelRadius, style: .continuous)
                 .stroke(theme.panelBorder, lineWidth: 1)
         )
+        .animation(.easeInOut(duration: 0.18), value: panelHeight)
+        .onPreferenceChange(HeaderHeightPreferenceKey.self) { measuredHeaderHeight = $0 }
+        .onPreferenceChange(ScrollContentHeightPreferenceKey.self) { measuredScrollContentHeight = $0 }
     }
     
     // MARK: - Sections
@@ -279,9 +323,12 @@ struct StatusBarView: View {
                             .font(.system(size: 34, weight: .heavy, design: .rounded))
                             .foregroundColor(theme.textMain)
                             .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
                         Text(formatted.suffix)
                             .font(.system(size: 16, weight: .heavy, design: .rounded))
                             .foregroundColor(theme.textSecondary)
+                            .lineLimit(1)
                         
                         let delta = currentReport.metrics.deltaTokens
                         HStack(spacing: 2) {
@@ -313,6 +360,8 @@ struct StatusBarView: View {
                         .font(.system(size: 22, weight: .heavy, design: .rounded))
                         .foregroundColor(theme.primaryGreen)
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
                 }
                 .padding(.top, 18)
             }
@@ -821,7 +870,9 @@ struct StatusBarView: View {
         if count == 0 {
             return ("0", "")
         }
-        if count >= 1_000_000 {
+        if count >= 1_000_000_000 {
+            return (String(format: "%.2f", Double(count) / 1_000_000_000), "B")
+        } else if count >= 1_000_000 {
             return (String(format: "%.2f", Double(count) / 1_000_000), "M")
         } else if count >= 1_000 {
             return (String(format: "%.1f", Double(count) / 1_000), "K")
@@ -907,6 +958,22 @@ private struct HeatmapMonthMarker: Identifiable {
     var id: String { "\(weekIndex)-\(label)" }
 }
 
+private struct HeaderHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct ScrollContentHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 private extension Text {
     func sectionTitleFont() -> some View {
         self
@@ -956,15 +1023,23 @@ private struct TrendCard: View {
                     Text(title)
                         .sectionTitleFont()
                         .foregroundColor(theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
                     Text(value)
                         .font(.system(size: 19, weight: .heavy, design: .rounded))
                         .foregroundColor(valueColor ?? theme.textMain)
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.62)
                     Text(subtitle)
                         .font(.system(size: 10.5, weight: .medium, design: .monospaced))
                         .foregroundColor(theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
                 }
-                Spacer()
+                .layoutPriority(1)
+
+                Spacer(minLength: 6)
                 
                 if points.count > 1 {
                     SparklineView(points: points, color: color)
@@ -1005,10 +1080,13 @@ private struct CompactStatCard: View {
                     .font(.system(size: 19, weight: .heavy, design: .rounded))
                     .foregroundColor(theme.textMain)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
                 Text(subtitle)
                     .font(.system(size: 10.5, weight: .medium, design: .monospaced))
                     .foregroundColor(theme.textSecondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.82)
             }
             .layoutPriority(1)
 
