@@ -21,8 +21,10 @@ enum LocalizedKey {
     // StatusBarView - Hero 区
     case totalTokensTitle, estCost
     case inputLabel, outputLabel, cacheLabel
+    case cacheSavedLabel
     // StatusBarView - 分区标题
     case tokensByModel, costByModel
+    case modelColumn, tokensColumn, costColumn
     case requestsTitle, costTrendTitle
     case mcpCallsTitle, skillCallsTitle
     case dailyActivity
@@ -91,8 +93,12 @@ final class L10n {
             .inputLabel:             "输入",
             .outputLabel:            "输出",
             .cacheLabel:             "缓存",
+            .cacheSavedLabel:        "缓存节省",
             .tokensByModel:          "按模型 TOKENS",
             .costByModel:            "按模型成本",
+            .modelColumn:            "模型",
+            .tokensColumn:           "TOKENS",
+            .costColumn:             "成本",
             .requestsTitle:          "请求数",
             .costTrendTitle:         "成本趋势",
             .mcpCallsTitle:          "MCP 调用",
@@ -150,8 +156,12 @@ final class L10n {
             .inputLabel:             "Input",
             .outputLabel:            "Output",
             .cacheLabel:             "Cache",
+            .cacheSavedLabel:        "Cache Saved",
             .tokensByModel:          "TOKENS BY MODEL",
             .costByModel:            "COST BY MODEL",
+            .modelColumn:            "MODEL",
+            .tokensColumn:           "TOKENS",
+            .costColumn:             "COST",
             .requestsTitle:          "REQUESTS",
             .costTrendTitle:         "COST TREND",
             .mcpCallsTitle:          "MCP CALLS",

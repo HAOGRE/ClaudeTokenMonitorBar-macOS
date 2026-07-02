@@ -82,6 +82,17 @@ struct Theme {
             dynamic(light: "#b8e2c9", dark: "#a8dfbd")
         ]
     }
+
+    var modelComparisonPalette: [Color] {
+        [
+            dynamic(light: "#2f7d3f", dark: "#68b977"),
+            dynamic(light: "#2678d8", dark: "#64a9ff"),
+            dynamic(light: "#ff9500", dark: "#ffb347"),
+            dynamic(light: "#78c783", dark: "#98dba3"),
+            dynamic(light: "#a42bbf", dark: "#d06be5"),
+            dynamic(light: "#d95050", dark: "#ef7a72")
+        ]
+    }
 }
 
 private enum DashboardLayout {
@@ -310,21 +321,18 @@ struct StatusBarView: View {
     
     private var splitBarSection: some View {
         VStack(spacing: 7) {
-            // 三段 Input / Cache / Output，与 TOTAL TOKENS（含 cache）口径一致
+            // 主条只表达实际交互量。Cache 是复用节省，避免和 Input/Output 放在同一线性比例里比较。
             let metrics = currentReport.metrics
-            let cacheColor = theme.palette[3]
-            let total = max(1, metrics.inputTokens + metrics.cacheTokens + metrics.outputTokens)
+            let total = max(1, metrics.inputTokens + metrics.outputTokens)
             let inRatio = Double(metrics.inputTokens) / Double(total)
-            let cacheRatio = Double(metrics.cacheTokens) / Double(total)
             let outRatio = Double(metrics.outputTokens) / Double(total)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4).fill(theme.track)
-                    if metrics.totalTokens > 0 {
+                    if metrics.inputTokens + metrics.outputTokens > 0 {
                         HStack(spacing: 0) {
                             theme.chartGreen.frame(width: geo.size.width * CGFloat(inRatio))
-                            cacheColor.frame(width: geo.size.width * CGFloat(cacheRatio))
                             theme.lightGreen.frame(width: geo.size.width * CGFloat(outRatio))
                         }
                         .cornerRadius(4)
@@ -333,29 +341,75 @@ struct StatusBarView: View {
             }
             .frame(height: 7)
 
-            HStack(spacing: 10) {
-                HStack(spacing: 4) {
-                    Circle().fill(theme.chartGreen).frame(width: 7, height: 7)
-                    Text("\(l10n.str(.inputLabel)) \(formatLargeNumberStr(metrics.inputTokens))")
-                        .font(.system(size: 10.5, weight: .medium, design: .monospaced))
-                        .foregroundColor(theme.textSecondary)
-                }
-                Spacer()
-                HStack(spacing: 4) {
-                    Circle().fill(cacheColor).frame(width: 7, height: 7)
-                    Text("\(l10n.str(.cacheLabel)) \(formatLargeNumberStr(metrics.cacheTokens))")
-                        .font(.system(size: 10.5, weight: .medium, design: .monospaced))
-                        .foregroundColor(theme.textSecondary)
-                }
-                Spacer()
-                HStack(spacing: 4) {
-                    Circle().fill(theme.lightGreen).frame(width: 7, height: 7)
-                    Text("\(l10n.str(.outputLabel)) \(formatLargeNumberStr(metrics.outputTokens))")
-                        .font(.system(size: 10.5, weight: .medium, design: .monospaced))
-                        .foregroundColor(theme.textSecondary)
-                }
+            ViewThatFits(in: .horizontal) {
+                splitBarLegendRow(metrics: metrics, includeLabels: true)
+                splitBarLegendRow(metrics: metrics, includeLabels: false)
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(theme.primaryGreen.opacity(0.045))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(theme.primaryGreen.opacity(0.16), lineWidth: 1)
+            )
         }
+    }
+
+    private func splitBarLegendRow(metrics: Metrics, includeLabels: Bool) -> some View {
+        HStack(spacing: 8) {
+            splitLegendItem(
+                label: l10n.str(.inputLabel),
+                value: formatLargeNumberStr(metrics.inputTokens),
+                color: theme.chartGreen,
+                includeLabel: includeLabels
+            )
+
+            splitLegendItem(
+                label: l10n.str(.outputLabel),
+                value: formatLargeNumberStr(metrics.outputTokens),
+                color: theme.lightGreen,
+                includeLabel: includeLabels
+            )
+
+            Spacer(minLength: 4)
+
+            cacheSavedBadge(tokens: metrics.cacheTokens)
+        }
+    }
+
+    private func splitLegendItem(label: String, value: String, color: Color, includeLabel: Bool) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 7, height: 7)
+            Text(includeLabel ? "\(label) \(value)" : value)
+                .font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                .foregroundColor(theme.textSecondary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func cacheSavedBadge(tokens: Int) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 9.5, weight: .bold))
+            Text("\(l10n.str(.cacheSavedLabel)) \(formatLargeNumberStr(tokens))")
+                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.74)
+        }
+        .foregroundColor(theme.primaryGreen)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .background(theme.primaryGreen.opacity(0.14))
+        .clipShape(Capsule(style: .continuous))
+        .layoutPriority(1)
+        .help("\(l10n.str(.cacheLabel)) \(formatLargeNumberStr(tokens))")
     }
     
     private var barChartSection: some View {
@@ -394,89 +448,133 @@ struct StatusBarView: View {
         }
     }
     
-    /// 双环形图：左 Tokens、右 Cost，图例在图形下方
+    /// 模型用量微型列表：按 cost 从高到低，同行比较 tokens 与 cost
     private var modelsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             if currentReport.models.isEmpty {
                 Text(l10n.str(.tokensByModel))
                     .sectionTitleFont()
                     .foregroundColor(theme.textSecondary)
                 compactEmptyState(l10n.str(.emptyUsage))
             } else {
-                let models = Array(currentReport.models.prefix(4))
-                HStack(alignment: .top, spacing: 12) {
-                    donutColumn(
-                        title: l10n.str(.tokensByModel),
-                        centerText: formatLargeNumberStr(currentReport.metrics.totalTokens),
-                        models: models,
-                        value: { Double($0.tokens) },
-                        display: { formatLargeNumberStr($0.tokens) }
-                    )
-                    donutColumn(
-                        title: l10n.str(.costByModel),
-                        centerText: MonitoringViewModel.formatCost(currentReport.metrics.cost),
-                        models: models,
-                        value: { $0.cost },
-                        display: { MonitoringViewModel.formatCost($0.cost) }
-                    )
+                let models = Array(
+                    currentReport.models
+                        .sorted {
+                            if $0.cost == $1.cost { return $0.tokens > $1.tokens }
+                            return $0.cost > $1.cost
+                        }
+                        .prefix(5)
+                )
+                let maxTokens = max(models.map(\.tokens).max() ?? 1, 1)
+                let maxCost = max(models.map(\.cost).max() ?? 0, 0.01)
+
+                HStack(spacing: 10) {
+                    modelListHeader(l10n.str(.modelColumn))
+                        .frame(width: 76, alignment: .leading)
+                    modelListHeader(l10n.str(.tokensColumn))
+                        .frame(width: 94, alignment: .leading)
+                    Rectangle()
+                        .fill(theme.separator)
+                        .frame(width: 1, height: 15)
+                    modelListHeader(l10n.str(.costColumn))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, 2)
+
+                VStack(spacing: 7) {
+                    ForEach(Array(models.enumerated()), id: \.element.id) { index, model in
+                        modelMicroListRow(
+                            model: model,
+                            color: modelComparisonColor(for: model.name, rank: index),
+                            maxTokens: maxTokens,
+                            maxCost: maxCost
+                        )
+                    }
                 }
             }
         }
     }
 
-    private func donutColumn(
-        title: String,
-        centerText: String,
-        models: [ModelStat],
-        value: @escaping (ModelStat) -> Double,
-        display: @escaping (ModelStat) -> String
-    ) -> some View {
-        VStack(spacing: 9) {
-            Text(title)
-                .sectionTitleFont()
-                .foregroundColor(theme.textSecondary)
+    private func modelListHeader(_ title: String) -> some View {
+        Text(title)
+            .sectionTitleFont()
+            .foregroundColor(theme.textSecondary)
+            .lineLimit(1)
+    }
 
-            ZStack {
-                Chart {
-                    ForEach(Array(models.enumerated()), id: \.element.id) { index, model in
-                        SectorMark(
-                            angle: .value("Value", value(model)),
-                            innerRadius: .ratio(0.7),
-                            angularInset: 1.5
-                        )
-                        .foregroundStyle(theme.palette[index % theme.palette.count])
-                    }
-                }
-                Text(centerText)
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+    private func modelMicroListRow(model: ModelStat, color: Color, maxTokens: Int, maxCost: Double) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+                Text(legendModelName(model.name))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundColor(theme.textMain)
-                    .monospacedDigit()
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .frame(width: 104, height: 104)
+            .frame(width: 76, alignment: .leading)
+            .help(model.name)
 
-            // 图例在图形下方：色块 + 短模型名 + 数值
-            VStack(spacing: 4) {
-                ForEach(Array(models.enumerated()), id: \.element.id) { index, model in
-                    HStack(spacing: 5) {
+            modelMetricCell(
+                value: formatLargeNumberStr(model.tokens),
+                ratio: Double(model.tokens) / Double(maxTokens),
+                color: color
+            )
+            .frame(width: 94)
+
+            Rectangle()
+                .fill(theme.separator)
+                .frame(width: 1, height: 24)
+
+            modelMetricCell(
+                value: MonitoringViewModel.formatCost(model.cost),
+                ratio: model.cost / maxCost,
+                color: color
+            )
+            .frame(maxWidth: .infinity)
+        }
+        .frame(height: 27)
+    }
+
+    private func modelMetricCell(value: String, ratio: Double, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value)
+                .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
+                .foregroundColor(theme.textSecondary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(theme.track)
+                    if ratio > 0 {
                         RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .fill(theme.palette[index % theme.palette.count])
-                            .frame(width: 7, height: 7)
-                        Text(legendModelName(model.name))
-                            .font(.system(size: 10.5, weight: .bold, design: .rounded))
-                            .foregroundColor(theme.textMain)
-                            .lineLimit(1)
-                        Spacer(minLength: 4)
-                        Text(display(model))
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundColor(theme.textSecondary)
-                            .monospacedDigit()
-                            .lineLimit(1)
+                            .fill(color)
+                            .frame(width: max(2, geo.size.width * CGFloat(min(ratio, 1))))
                     }
                 }
             }
+            .frame(height: 3)
         }
-        .frame(maxWidth: .infinity)
+        .frame(height: 21)
+    }
+
+    private func modelComparisonColor(for name: String, rank: Int) -> Color {
+        let lower = name.lowercased()
+        let palette = theme.modelComparisonPalette
+
+        if lower.contains("fable") { return palette[0] }
+        if lower.contains("sonnet") { return palette[1] }
+        if lower.contains("haiku") { return palette[2] }
+        if lower.contains("opus") { return palette[3] }
+        if lower.contains("flash") { return palette[4] }
+        if lower.contains("mythos") { return palette[5] }
+
+        return palette[rank % palette.count]
     }
     
     private var trendCardsSection: some View {
