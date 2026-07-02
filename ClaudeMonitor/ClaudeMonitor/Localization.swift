@@ -11,8 +11,10 @@ enum LocalizedKey {
     case launchAtLoginTitle, launchAtLoginSubtitle
     case showDockIconTitle, showDockIconSubtitle
     case refreshIntervalTitle, refreshIntervalSubtitle
-    case topProjectsTitle, topProjectsSubtitle
-    case recentRecordsTitle, recentRecordsSubtitle
+    case showModelsTitle, showModelsSubtitle
+    case showTrendTitle, showTrendSubtitle
+    case showMcpSkillTitle, showMcpSkillSubtitle
+    case showHeatmapTitle, showHeatmapSubtitle
     // StatusBarView - 头部与周期切换
     case periodDay, periodWeek, periodMonth
     case copySnapshotHelp, settingsHelp
@@ -26,21 +28,19 @@ enum LocalizedKey {
     case dailyActivity
     // StatusBarView - 格式化文案（String(format:) 占位）
     case sessionsFormat        // "%@ sessions"
-    case mcpHeaderFormat       // "%@ · %@ servers"
-    case skillHeaderFormat     // "%@ · %@ skills"
-    case moreFormat            // "+%d more"
+    case serversFormat         // "%@ servers"
+    case skillsCountFormat     // "%@ skills"
     // StatusBarView - 空状态
-    case emptyUsage, emptyModelCost, emptyMcp, emptySkill, emptyDaily
+    case emptyUsage, emptyMcp, emptySkill, emptyDaily
     // StatusBarView - 趋势副标题
     case trendToday, trendThisWeek, trendThisMonth
     // StatusBarView - 热力图图例
     case legendLess, legendMore
-    // 底栏
-    case resetButton, quitButton
     // ViewModel
     case noDataError
     // v4 Rate Limits
-    case v4SectionTitle, v4SectionTitleEstimated, v4FiveHourWindow, v4ResetsAt
+    case v4SectionTitleOfficial, v4SectionTitle, v4SectionTitleEstimated
+    case v4FiveHourWindow, v4ResetsAt
     case v4SevenDayWindow, v4PredictHit, v4NoHitBeforeReset, v4LimitReached, v4EstimatedDisclaimer
 }
 
@@ -73,10 +73,14 @@ final class L10n {
             .showDockIconSubtitle:   "在 Dock 栏显示应用图标",
             .refreshIntervalTitle:   "刷新间隔",
             .refreshIntervalSubtitle:"数据自动刷新的时间间隔",
-            .topProjectsTitle:       "MCP 调用",
-            .topProjectsSubtitle:    "显示已安装 MCP 服务的调用统计",
-            .recentRecordsTitle:     "Skill 调用",
-            .recentRecordsSubtitle:  "显示已安装 Skill 的调用统计",
+            .showModelsTitle:        "模型统计",
+            .showModelsSubtitle:     "按模型的 Tokens 与成本环形图",
+            .showTrendTitle:         "趋势卡片",
+            .showTrendSubtitle:      "请求数与成本趋势",
+            .showMcpSkillTitle:      "MCP / Skill 调用",
+            .showMcpSkillSubtitle:   "MCP 与 Skill 调用统计卡片",
+            .showHeatmapTitle:       "每日活跃热力图",
+            .showHeatmapSubtitle:    "近 6 个月的活跃热力图",
             .periodDay:              "日",
             .periodWeek:             "周",
             .periodMonth:            "月",
@@ -95,11 +99,9 @@ final class L10n {
             .skillCallsTitle:        "SKILL 调用",
             .dailyActivity:          "每日活跃",
             .sessionsFormat:         "%@ 个会话",
-            .mcpHeaderFormat:        "%@ · %@ 个服务",
-            .skillHeaderFormat:      "%@ · %@ 个技能",
-            .moreFormat:             "还有 %d 个",
+            .serversFormat:          "%@ 个服务",
+            .skillsCountFormat:      "%@ 个技能",
             .emptyUsage:             "本期无用量",
-            .emptyModelCost:         "本期无模型成本",
             .emptyMcp:               "本期无 MCP 调用",
             .emptySkill:             "本期无 Skill 调用",
             .emptyDaily:             "暂无每日活跃数据",
@@ -108,10 +110,9 @@ final class L10n {
             .trendThisMonth:         "本月",
             .legendLess:             "少",
             .legendMore:             "多",
-            .resetButton:            "重置",
-            .quitButton:             "退出",
             .noDataError:            "未找到数据，请检查本地用量数据目录访问权限",
-            .v4SectionTitle:         "官方速率限制 (v4)",
+            .v4SectionTitleOfficial: "官方限额 (实时)",
+            .v4SectionTitle:         "速率限制 (monitor)",
             .v4SectionTitleEstimated:"速率限制 (本地估算)",
             .v4FiveHourWindow:       "5 小时窗口",
             .v4ResetsAt:             "重置于",
@@ -131,10 +132,14 @@ final class L10n {
             .showDockIconSubtitle:   "Display app icon in the Dock",
             .refreshIntervalTitle:   "Refresh Interval",
             .refreshIntervalSubtitle:"Interval for automatic data refresh",
-            .topProjectsTitle:       "MCP Calls",
-            .topProjectsSubtitle:    "Show call stats for installed MCP servers",
-            .recentRecordsTitle:     "Skill Calls",
-            .recentRecordsSubtitle:  "Show call stats for installed Skills",
+            .showModelsTitle:        "Model Breakdown",
+            .showModelsSubtitle:     "Tokens & cost donuts by model",
+            .showTrendTitle:         "Trend Cards",
+            .showTrendSubtitle:      "Requests and cost trend",
+            .showMcpSkillTitle:      "MCP / Skill Calls",
+            .showMcpSkillSubtitle:   "MCP & Skill call stat cards",
+            .showHeatmapTitle:       "Daily Activity Heatmap",
+            .showHeatmapSubtitle:    "6-month activity heatmap",
             .periodDay:              "Day",
             .periodWeek:             "Week",
             .periodMonth:            "Month",
@@ -153,11 +158,9 @@ final class L10n {
             .skillCallsTitle:        "SKILL CALLS",
             .dailyActivity:          "DAILY ACTIVITY",
             .sessionsFormat:         "%@ sessions",
-            .mcpHeaderFormat:        "%@ · %@ servers",
-            .skillHeaderFormat:      "%@ · %@ skills",
-            .moreFormat:             "+%d more",
+            .serversFormat:          "%@ servers",
+            .skillsCountFormat:      "%@ skills",
             .emptyUsage:             "No usage in this period",
-            .emptyModelCost:         "No model costs in this period",
             .emptyMcp:               "No MCP calls in this period",
             .emptySkill:             "No skill calls in this period",
             .emptyDaily:             "No daily activity",
@@ -166,10 +169,9 @@ final class L10n {
             .trendThisMonth:         "this month",
             .legendLess:             "Less",
             .legendMore:             "More",
-            .resetButton:            "Reset",
-            .quitButton:             "Quit",
             .noDataError:            "No data found. Please check local usage data folder access",
-            .v4SectionTitle:         "Official Rate Limits (v4)",
+            .v4SectionTitleOfficial: "Official Limits (Live)",
+            .v4SectionTitle:         "Rate Limits (monitor)",
             .v4SectionTitleEstimated:"Rate Limits (Estimated)",
             .v4FiveHourWindow:       "5-Hour Window",
             .v4ResetsAt:             "Resets at",

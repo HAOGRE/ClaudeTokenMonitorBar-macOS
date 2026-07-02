@@ -73,11 +73,19 @@ struct Dashboard {
 
 // MARK: - 监控数据 Model
 
+/// 限额数据来源（按优先级）
+enum LimitSource {
+    case officialApi    // OAuth usage API（Claude Code /usage 同源，最准确）
+    case daemonFile     // claude-code-usage-monitor 守护进程 state 文件
+    case localEstimate  // 本地 JSONL P90 估算（兜底）
+    case none
+}
+
 struct MonitoringData {
     var dashboard: Dashboard = .empty
     var lastUpdated: Date = Date()
     var v4State: V4StateProtocol? = nil
-    var isV4StateEstimated: Bool = false  // true = 本地估算，false = 官方数据
+    var limitSource: LimitSource = .none
 
     static var empty: MonitoringData { MonitoringData() }
 }
@@ -115,12 +123,8 @@ final class MonitoringViewModel {
     private let logger = Logger(subsystem: "com.haogre.claudetokenmonitor", category: "viewmodel")
     private let tokenReader = TokenDataReader()
     private let stateReader = StateProtocolReader()
+    private let oauthReader = OAuthUsageReader()
     @ObservationIgnored nonisolated(unsafe) private var autoRefreshTask: Task<Void, Never>?
-
-    private var resetDate: Date? {
-        get { UserDefaults.standard.object(forKey: "statsResetDate") as? Date }
-        set { UserDefaults.standard.set(newValue, forKey: "statsResetDate") }
-    }
 
     private var lastSampleInput: Int = 0
     private var lastSampleOutput: Int = 0
@@ -150,12 +154,18 @@ final class MonitoringViewModel {
 
         let reader = tokenReader
         let stateR = stateReader
-        let capturedResetDate = resetDate
-        
-        let (result, state) = await Task.detached(priority: .userInitiated) {
-            let v4State = await stateR.readState()
+        let oauthR = oauthReader
+
+        // 限额数据源优先级：OAuth 官方 API → 守护进程 state 文件 → 本地 P90 估算（updateMonitoringData 内兜底）
+        let (result, state, source) = await Task.detached(priority: .userInitiated) { () -> (LoadResult, V4StateProtocol?, LimitSource) in
+            var v4State = await oauthR.readState()
+            var source: LimitSource = v4State != nil ? .officialApi : .none
+            if v4State == nil {
+                v4State = await stateR.readState()
+                if v4State != nil { source = .daemonFile }
+            }
             // 加载约半年数据以便生成 Tokenscope 风格热力图
-            let allData = reader.loadAllData(since: capturedResetDate, daysBack: 190)
+            let allData = reader.loadAllData(daysBack: 190)
             return (
                 LoadResult(
                     allEntries: allData.allEntries,
@@ -165,11 +175,12 @@ final class MonitoringViewModel {
                     installedMcpServers: allData.installedMcpServers,
                     installedSkills: allData.installedSkills
                 ),
-                v4State
+                v4State,
+                source
             )
         }.value
 
-        updateMonitoringData(from: result, v4State: state)
+        updateMonitoringData(from: result, v4State: state, source: source)
 
         if result.allEntries.isEmpty && state == nil {
             errorMessage = "未找到数据，请检查本地用量数据目录访问权限"
@@ -178,7 +189,7 @@ final class MonitoringViewModel {
         isLoading = false
     }
 
-    private func updateMonitoringData(from result: LoadResult, v4State: V4StateProtocol?) {
+    private func updateMonitoringData(from result: LoadResult, v4State: V4StateProtocol?, source: LimitSource) {
         let now = Date()
         let calendar = Calendar.current
         
@@ -280,22 +291,22 @@ final class MonitoringViewModel {
         }
         dashboard.heatmap = heatmap
         
-        // Fallback: 当没有官方 state 数据时，使用本地估算
+        // Fallback: 官方 API 和守护进程都不可用时，使用本地 P90 估算
         let effectiveV4State: V4StateProtocol?
-        let isEstimated: Bool
+        let effectiveSource: LimitSource
         if let v4State = v4State {
             effectiveV4State = v4State
-            isEstimated = false
+            effectiveSource = source
         } else {
             effectiveV4State = calculateLocalRateLimits(from: result.allEntries, now: now)
-            isEstimated = effectiveV4State != nil
+            effectiveSource = effectiveV4State != nil ? .localEstimate : .none
         }
 
         var updated = MonitoringData()
         updated.dashboard = dashboard
         updated.lastUpdated = now
         updated.v4State = effectiveV4State
-        updated.isV4StateEstimated = isEstimated
+        updated.limitSource = effectiveSource
 
         monitoringData = updated
     }
@@ -495,19 +506,6 @@ final class MonitoringViewModel {
         startAutoRefresh()
     }
 
-    func resetStats() {
-        UserDefaults.standard.set(Date(), forKey: "statsResetDate")
-        monitoringData = .empty
-        inputHistory = []
-        outputHistory = []
-        lastSampleInput = 0
-        lastSampleOutput = 0
-        lastSampleTime = Date()
-        burnRatePerMin = 0
-        isFirstLoad = true
-        refreshData()
-    }
-
     static func formatCost(_ cost: Double) -> String {
         String(format: "$%.2f", cost)
     }
@@ -542,9 +540,10 @@ final class MonitoringViewModel {
         }
     }
 
-    // MARK: - 本地限额估算（当没有 claude-code-usage-monitor 时的兜底方案）
+    // MARK: - 本地限额估算（官方 API 与守护进程都不可用时的兜底方案）
 
     /// 基于本地 JSONL 数据计算限额估算
+    /// 限额取历史用量 P90（同 Claude-Code-Usage-Monitor 的 custom plan 算法），
     /// 返回 V4StateProtocol 结构，与官方数据格式一致，方便 UI 统一处理
     private func calculateLocalRateLimits(from entries: [UsageEntry], now: Date) -> V4StateProtocol? {
         guard !entries.isEmpty else { return nil }
@@ -562,9 +561,9 @@ final class MonitoringViewModel {
             .filter { $0.timestamp >= sevenDayAgo }
             .reduce(0) { $0 + totalTokens(in: $1) }
 
-        // ponytail: 使用固定默认限额；历史 P90 估算会增加复杂度且不一定更准确
-        let fiveHourLimit = 100_000
-        let sevenDayLimit = 1_000_000
+        // 限额估算：历史会话块/周用量的 P90，且不低于当前已用量（保证百分比 ≤100）
+        let fiveHourLimit = max(estimatedFiveHourLimit(from: entries), fiveHourTokens, 1)
+        let sevenDayLimit = max(estimatedSevenDayLimit(from: entries), sevenDayTokens, 1)
 
         let calendar = Calendar.current
 
@@ -611,6 +610,47 @@ final class MonitoringViewModel {
             local: nil,
             local_history: nil
         )
+    }
+
+    /// 5 小时限额估算：把历史条目按 5 小时会话块聚合（窗口自首条消息起算 5 小时），
+    /// 取各块 token 总量的 P90
+    private func estimatedFiveHourLimit(from entries: [UsageEntry]) -> Int {
+        var blockSums: [Int] = []
+        var blockStart: Date?
+        var blockSum = 0
+
+        // entries 已按 timestamp 升序（loadAllData 排序过）
+        for entry in entries {
+            if let start = blockStart, entry.timestamp.timeIntervalSince(start) < 5 * 3600 {
+                blockSum += totalTokens(in: entry)
+            } else {
+                if blockStart != nil { blockSums.append(blockSum) }
+                blockStart = entry.timestamp
+                blockSum = totalTokens(in: entry)
+            }
+        }
+        if blockStart != nil { blockSums.append(blockSum) }
+
+        return percentile90(of: blockSums)
+    }
+
+    /// 7 天限额估算：按自然周聚合的 token 总量 P90
+    private func estimatedSevenDayLimit(from entries: [UsageEntry]) -> Int {
+        let calendar = Calendar.current
+        var weekSums: [Date: Int] = [:]
+        for entry in entries {
+            let comps = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: entry.timestamp)
+            guard let weekStart = calendar.date(from: comps) else { continue }
+            weekSums[weekStart, default: 0] += totalTokens(in: entry)
+        }
+        return percentile90(of: Array(weekSums.values))
+    }
+
+    private func percentile90(of values: [Int]) -> Int {
+        guard !values.isEmpty else { return 0 }
+        let sorted = values.sorted()
+        let index = min(sorted.count - 1, Int((Double(sorted.count) * 0.9).rounded(.up)) - 1)
+        return sorted[max(0, index)]
     }
 
     /// 格式化为相对时间字符串（如 "in 2h 15m"）

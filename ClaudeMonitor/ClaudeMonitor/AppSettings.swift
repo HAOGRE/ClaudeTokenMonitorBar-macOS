@@ -4,12 +4,18 @@ import ServiceManagement
 
 @Observable
 final class AppSettings {
-    // MARK: - 显示项配置
-    var showProjectSection: Bool {
-        didSet { UserDefaults.standard.set(showProjectSection, forKey: "showProjectSection") }
+    // MARK: - 显示项配置（可隐藏模块；Hero/限额/图表为固定模块不可隐藏）
+    var showModelsSection: Bool {
+        didSet { UserDefaults.standard.set(showModelsSection, forKey: "showModelsSection") }
     }
-    var showRecentSection: Bool {
-        didSet { UserDefaults.standard.set(showRecentSection, forKey: "showRecentSection") }
+    var showTrendSection: Bool {
+        didSet { UserDefaults.standard.set(showTrendSection, forKey: "showTrendSection") }
+    }
+    var showMcpSkillSection: Bool {
+        didSet { UserDefaults.standard.set(showMcpSkillSection, forKey: "showMcpSkillSection") }
+    }
+    var showHeatmapSection: Bool {
+        didSet { UserDefaults.standard.set(showHeatmapSection, forKey: "showHeatmapSection") }
     }
 
     // MARK: - 刷新间隔（秒）
@@ -42,10 +48,12 @@ final class AppSettings {
     private init() {
         let defaults = UserDefaults.standard
         // 首次启动默认全部显示
-        showProjectSection = defaults.object(forKey: "showProjectSection") as? Bool ?? true
-        showRecentSection  = defaults.object(forKey: "showRecentSection")  as? Bool ?? true
-        refreshInterval    = defaults.object(forKey: "refreshInterval")    as? Int  ?? 5
-        showDockIcon       = defaults.object(forKey: "showDockIcon")       as? Bool ?? false
+        showModelsSection   = defaults.object(forKey: "showModelsSection")   as? Bool ?? true
+        showTrendSection    = defaults.object(forKey: "showTrendSection")    as? Bool ?? true
+        showMcpSkillSection = defaults.object(forKey: "showMcpSkillSection") as? Bool ?? true
+        showHeatmapSection  = defaults.object(forKey: "showHeatmapSection")  as? Bool ?? true
+        refreshInterval     = defaults.object(forKey: "refreshInterval")     as? Int  ?? 5
+        showDockIcon        = defaults.object(forKey: "showDockIcon")        as? Bool ?? false
 
         // 从系统读取开机启动的实际状态（以系统为准，不存 UserDefaults）
         launchAtLogin = SMAppService.mainApp.status == .enabled

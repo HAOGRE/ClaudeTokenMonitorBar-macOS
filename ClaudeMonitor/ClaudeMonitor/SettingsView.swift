@@ -71,26 +71,46 @@ struct SettingsView: View {
                 Divider()
 
 
-                // 显示项
+                // 显示项（可隐藏模块）
                 settingsSectionHeader(title: l10n.str(.sectionDisplay), icon: "eye.fill")
 
                 SettingsToggleRow(
-                    icon: "folder.fill",
-                    title: l10n.str(.topProjectsTitle),
-                    subtitle: l10n.str(.topProjectsSubtitle),
+                    icon: "chart.pie.fill",
+                    title: l10n.str(.showModelsTitle),
+                    subtitle: l10n.str(.showModelsSubtitle),
                     isOn: Binding(
-                        get: { settings.showProjectSection },
-                        set: { settings.showProjectSection = $0 }
+                        get: { settings.showModelsSection },
+                        set: { settings.showModelsSection = $0 }
                     )
                 )
 
                 SettingsToggleRow(
-                    icon: "clock.fill",
-                    title: l10n.str(.recentRecordsTitle),
-                    subtitle: l10n.str(.recentRecordsSubtitle),
+                    icon: "chart.line.uptrend.xyaxis",
+                    title: l10n.str(.showTrendTitle),
+                    subtitle: l10n.str(.showTrendSubtitle),
                     isOn: Binding(
-                        get: { settings.showRecentSection },
-                        set: { settings.showRecentSection = $0 }
+                        get: { settings.showTrendSection },
+                        set: { settings.showTrendSection = $0 }
+                    )
+                )
+
+                SettingsToggleRow(
+                    icon: "puzzlepiece.extension.fill",
+                    title: l10n.str(.showMcpSkillTitle),
+                    subtitle: l10n.str(.showMcpSkillSubtitle),
+                    isOn: Binding(
+                        get: { settings.showMcpSkillSection },
+                        set: { settings.showMcpSkillSection = $0 }
+                    )
+                )
+
+                SettingsToggleRow(
+                    icon: "square.grid.3x3.fill",
+                    title: l10n.str(.showHeatmapTitle),
+                    subtitle: l10n.str(.showHeatmapSubtitle),
+                    isOn: Binding(
+                        get: { settings.showHeatmapSection },
+                        set: { settings.showHeatmapSection = $0 }
                     )
                 )
             }

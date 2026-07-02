@@ -275,7 +275,7 @@ class TokenDataReader {
         let installedSkills: Int
     }
 
-    func loadAllData(since: Date? = nil, daysBack: Int = 30) -> AllData {
+    func loadAllData(daysBack: Int = 30) -> AllData {
         let expandedPath = BookmarkManager.shared.resolvedPath() ?? claudeDataPath()
         let fileManager = FileManager.default
         let toolConfig = loadUserToolConfig()
@@ -310,10 +310,6 @@ class TokenDataReader {
         let todayCutoff = startOfToday
         let dailyCutoff = calendar.date(byAdding: .day, value: -daysBack, to: startOfToday)
             ?? now.addingTimeInterval(-Double(daysBack) * 86400)
-        // 提前跳过条目的截止时间：
-        // - since 有值时取 min(since, dailyCutoff)，因为 allEntries 需要 since 之后的全量数据
-        // - since 为 nil 时只用 dailyCutoff 做提前跳过（allEntries 需要全量历史，不能用 dailyCutoff 截断）
-        let overallCutoff: Date? = since.map { min($0, dailyCutoff) }
 
         var seenHashes = Set<String>()
         var allEntries: [UsageEntry] = []
@@ -329,16 +325,11 @@ class TokenDataReader {
             let fileEntries = rawEntriesForFile(at: filePath, seenHashes: &seenHashes, config: toolConfig)
 
             for entry in fileEntries {
-                // 按项目：全量历史，与原 getProjectData(cutoffDate: nil) 行为一致
+                // 按项目：全量历史
                 projectEntries[projectName, default: []].append(entry)
 
-                // since 有值时提前跳过绝对不需要的条目（性能优化，不影响正确性）
-                if let cutoff = overallCutoff, entry.timestamp < cutoff { continue }
-
-                // 全量（受 since 过滤）
-                if since == nil || entry.timestamp >= since! {
-                    allEntries.append(entry)
-                }
+                // 全量历史（热力图与限额估算需要）
+                allEntries.append(entry)
                 // 最近 24h
                 if entry.timestamp >= todayCutoff {
                     todayEntries.append(entry)

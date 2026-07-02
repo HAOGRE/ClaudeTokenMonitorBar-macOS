@@ -85,15 +85,12 @@ struct Theme {
 }
 
 private enum DashboardLayout {
-    static let panelWidth: CGFloat = 400
+    static let panelWidth: CGFloat = 360
     static let panelHeight: CGFloat = 760
     static let panelRadius: CGFloat = 18
     static let horizontalPadding: CGFloat = 16
     static let sectionSpacing: CGFloat = 12
     static let sectionTitleSize: CGFloat = 10.5
-    static let rowLabelWidth: CGFloat = 116
-    static let rowValueWidth: CGFloat = 50
-    static let rowPercentWidth: CGFloat = 32
     static let barHeight: CGFloat = 5
     static let heatmapCell: CGFloat = 9
     static let heatmapGap: CGFloat = 3
@@ -142,34 +139,41 @@ struct StatusBarView: View {
             headerSection
 
             ScrollView(.vertical, showsIndicators: false) {
+                // 模块排序按关注度：①Hero ②限额 ③用量图表 为固定模块；其余可在设置中隐藏
                 VStack(spacing: DashboardLayout.sectionSpacing) {
                     heroSection
+
+                    if let limits = viewModel.monitoringData.v4State?.limits,
+                       let fiveHour = limits.five_hour {
+                        v4RateLimitsSection(
+                            fiveHour: fiveHour,
+                            sevenDay: limits.seven_day,
+                            source: viewModel.monitoringData.limitSource
+                        )
+                    }
+
                     splitBarSection
                     barChartSection
 
-                    sectionDivider
-                    tokensByModelSection
-
-                    sectionDivider
-                    costByModelSection
-
-                    sectionDivider
-                    trendCardsSection
-
-                    if settings.showProjectSection {
+                    if settings.showModelsSection {
                         sectionDivider
-                        projectsSection
+                        modelsSection
                     }
 
-                    if settings.showRecentSection {
+                    if settings.showTrendSection {
                         sectionDivider
-                        skillsSection
+                        trendCardsSection
                     }
 
-                    sectionDivider
-                    heatmapSection
+                    if settings.showMcpSkillSection {
+                        sectionDivider
+                        mcpSkillCardsSection
+                    }
 
-                    bottomBar
+                    if settings.showHeatmapSection {
+                        sectionDivider
+                        heatmapSection
+                    }
                 }
                 .padding(.horizontal, DashboardLayout.horizontalPadding)
                 .padding(.bottom, DashboardLayout.horizontalPadding)
@@ -188,20 +192,20 @@ struct StatusBarView: View {
     
     private var headerSection: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "chart.bar")
-                    .font(.system(size: 11, weight: .heavy))
-                    .foregroundColor(theme.primaryGreen)
-                    .frame(width: 18, height: 18)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .stroke(theme.primaryGreen, lineWidth: 1.4)
-                    )
-                Text("Tokenscope")
+            HStack(spacing: 7) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 20, height: 20)
+                Text("CTMB")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(theme.textMain)
+                if viewModel.errorMessage != nil {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(theme.warning)
+                        .help(l10n.str(.noDataError))
+                }
             }
-            .frame(minWidth: 116, alignment: .leading)
 
             Spacer()
 
@@ -218,13 +222,11 @@ struct StatusBarView: View {
                     .stroke(theme.segBorder, lineWidth: 1)
             )
 
-            HStack(spacing: 4) {
-                headerIconButton(
-                    systemName: "square.and.arrow.up",
-                    help: l10n.str(.copySnapshotHelp),
-                    action: copyPanelSnapshot
-                )
-            }
+            headerIconButton(
+                systemName: "gearshape",
+                help: l10n.str(.settingsHelp),
+                action: { showingSettings = true }
+            )
         }
         .padding(.horizontal, DashboardLayout.horizontalPadding)
         .padding(.top, DashboardLayout.horizontalPadding)
@@ -246,23 +248,6 @@ struct StatusBarView: View {
         }
         .buttonStyle(.plain)
         .help(help)
-    }
-
-    private func copyPanelSnapshot() {
-        // MenuBarExtra 面板不一定是 keyWindow，按面板宽度在可见窗口中查找
-        let panelWindow = NSApp.keyWindow
-            ?? NSApp.windows.first { window in
-                window.isVisible && abs((window.contentView?.bounds.width ?? 0) - DashboardLayout.panelWidth) < 1
-            }
-        guard let contentView = panelWindow?.contentView else { return }
-        let bounds = contentView.bounds
-        guard let bitmap = contentView.bitmapImageRepForCachingDisplay(in: bounds) else { return }
-        contentView.cacheDisplay(in: bounds, to: bitmap)
-
-        let image = NSImage(size: bounds.size)
-        image.addRepresentation(bitmap)
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.writeObjects([image])
     }
 
     private var sectionDivider: some View {
@@ -411,146 +396,128 @@ struct StatusBarView: View {
         }
     }
     
-    private var tokensByModelSection: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Text(l10n.str(.tokensByModel))
+    /// 双环形图：左 Tokens、右 Cost，图例在图形下方
+    private var modelsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if currentReport.models.isEmpty {
+                Text(l10n.str(.tokensByModel))
+                    .sectionTitleFont()
+                    .foregroundColor(theme.textSecondary)
+                compactEmptyState(l10n.str(.emptyUsage))
+            } else {
+                let models = Array(currentReport.models.prefix(4))
+                HStack(alignment: .top, spacing: 12) {
+                    donutColumn(
+                        title: l10n.str(.tokensByModel),
+                        centerText: formatLargeNumberStr(currentReport.metrics.totalTokens),
+                        models: models,
+                        value: { Double($0.tokens) },
+                        display: { formatLargeNumberStr($0.tokens) }
+                    )
+                    donutColumn(
+                        title: l10n.str(.costByModel),
+                        centerText: MonitoringViewModel.formatCost(currentReport.metrics.cost),
+                        models: models,
+                        value: { $0.cost },
+                        display: { MonitoringViewModel.formatCost($0.cost) }
+                    )
+                }
+            }
+        }
+    }
+
+    private func donutColumn(
+        title: String,
+        centerText: String,
+        models: [ModelStat],
+        value: @escaping (ModelStat) -> Double,
+        display: @escaping (ModelStat) -> String
+    ) -> some View {
+        VStack(spacing: 9) {
+            Text(title)
                 .sectionTitleFont()
                 .foregroundColor(theme.textSecondary)
 
-            if currentReport.models.isEmpty {
-                compactEmptyState(l10n.str(.emptyUsage))
-            } else {
-                let total = max(1, currentReport.metrics.totalTokens)
-                ForEach(Array(currentReport.models.prefix(5).enumerated()), id: \.element.id) { index, model in
-                    let pct = Double(model.tokens) / Double(total)
-                    HStack(spacing: 8) {
+            ZStack {
+                Chart {
+                    ForEach(Array(models.enumerated()), id: \.element.id) { index, model in
+                        SectorMark(
+                            angle: .value("Value", value(model)),
+                            innerRadius: .ratio(0.7),
+                            angularInset: 1.5
+                        )
+                        .foregroundStyle(theme.palette[index % theme.palette.count])
+                    }
+                }
+                Text(centerText)
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .foregroundColor(theme.textMain)
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+            .frame(width: 104, height: 104)
+
+            // 图例在图形下方：色块 + 短模型名 + 数值
+            VStack(spacing: 4) {
+                ForEach(Array(models.enumerated()), id: \.element.id) { index, model in
+                    HStack(spacing: 5) {
                         RoundedRectangle(cornerRadius: 2, style: .continuous)
                             .fill(theme.palette[index % theme.palette.count])
                             .frame(width: 7, height: 7)
-                        Text(shortModelName(model.name))
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                        Text(legendModelName(model.name))
+                            .font(.system(size: 10.5, weight: .bold, design: .rounded))
                             .foregroundColor(theme.textMain)
-                            .frame(width: DashboardLayout.rowLabelWidth, alignment: .leading)
                             .lineLimit(1)
-                        
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous).fill(theme.track)
-                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous)
-                                    .fill(theme.palette[index % theme.palette.count])
-                                    .frame(width: geo.size.width * CGFloat(pct))
-                            }
-                        }
-                        .frame(height: DashboardLayout.barHeight)
-                        
-                        Text(formatLargeNumberStr(model.tokens))
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        Spacer(minLength: 4)
+                        Text(display(model))
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundColor(theme.textSecondary)
-                            .frame(width: DashboardLayout.rowValueWidth, alignment: .trailing)
                             .monospacedDigit()
-                            
-                        Text("\(Int(pct * 100))%")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(theme.textMain)
-                            .frame(width: DashboardLayout.rowPercentWidth, alignment: .trailing)
-                            .monospacedDigit()
-                    }
-                    .frame(height: 22)
-                }
-            }
-        }
-    }
-    
-    private var costByModelSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(l10n.str(.costByModel))
-                .sectionTitleFont()
-                .foregroundColor(theme.textSecondary)
-
-            if currentReport.models.isEmpty {
-                compactEmptyState(l10n.str(.emptyModelCost))
-            } else {
-                HStack(spacing: 16) {
-                    ZStack {
-                        Chart {
-                            ForEach(Array(currentReport.models.prefix(5).enumerated()), id: \.element.id) { index, model in
-                                SectorMark(
-                                    angle: .value("Cost", model.cost),
-                                    innerRadius: .ratio(0.7),
-                                    angularInset: 1.5
-                                )
-                                .foregroundStyle(theme.palette[index % theme.palette.count])
-                            }
-                        }
-                        Text(MonitoringViewModel.formatCost(currentReport.metrics.cost))
-                            .font(.system(size: 17, weight: .heavy, design: .rounded))
-                            .foregroundColor(theme.textMain)
-                            .monospacedDigit()
-                    }
-                    .frame(width: 100, height: 100)
-                    
-                    VStack(spacing: 6) {
-                        ForEach(Array(currentReport.models.prefix(5).enumerated()), id: \.element.id) { index, model in
-                            HStack(spacing: 8) {
-                                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                    .fill(theme.palette[index % theme.palette.count])
-                                    .frame(width: 7, height: 7)
-                                Text(shortModelName(model.name))
-                                    .font(.system(size: 11.5, weight: .bold, design: .rounded))
-                                    .foregroundColor(theme.textMain)
-                                    .lineLimit(1)
-                                Spacer()
-                                Text(MonitoringViewModel.formatCost(model.cost))
-                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                    .foregroundColor(theme.textSecondary)
-                                    .monospacedDigit()
-                            }
-                            .frame(height: 17)
-                        }
+                            .lineLimit(1)
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity)
     }
     
     private var trendCardsSection: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                TrendCard(
-                    title: l10n.str(.requestsTitle),
-                    value: formatWholeNumber(currentReport.metrics.requests),
-                    subtitle: String(format: l10n.str(.sessionsFormat), formatWholeNumber(currentReport.metrics.sessions)),
-                    points: currentReport.reqTrend,
-                    color: theme.primaryGreen,
-                    valueColor: nil
-                )
-                TrendCard(
-                    title: l10n.str(.costTrendTitle),
-                    value: MonitoringViewModel.formatCost(currentReport.metrics.cost),
-                    subtitle: trendSubtitle,
-                    points: currentReport.costTrend,
-                    color: theme.primaryGreen,
-                    valueColor: theme.primaryGreen
-                )
-            }
-
-            if let limits = viewModel.monitoringData.v4State?.limits, let fiveHour = limits.five_hour {
-                v4RateLimitsSection(
-                    fiveHour: fiveHour,
-                    sevenDay: limits.seven_day,
-                    isEstimated: viewModel.monitoringData.isV4StateEstimated
-                )
-            }
+        HStack(spacing: 10) {
+            TrendCard(
+                title: l10n.str(.requestsTitle),
+                value: formatWholeNumber(currentReport.metrics.requests),
+                subtitle: String(format: l10n.str(.sessionsFormat), formatWholeNumber(currentReport.metrics.sessions)),
+                points: currentReport.reqTrend,
+                color: theme.primaryGreen,
+                valueColor: nil
+            )
+            TrendCard(
+                title: l10n.str(.costTrendTitle),
+                value: MonitoringViewModel.formatCost(currentReport.metrics.cost),
+                subtitle: trendSubtitle,
+                points: currentReport.costTrend,
+                color: theme.primaryGreen,
+                valueColor: theme.primaryGreen
+            )
         }
     }
 
-    private func v4RateLimitsSection(fiveHour: V4LimitDetail, sevenDay: V4LimitDetail?, isEstimated: Bool) -> some View {
-        VStack(spacing: 12) {
+    private func v4RateLimitsSection(fiveHour: V4LimitDetail, sevenDay: V4LimitDetail?, source: LimitSource) -> some View {
+        let isEstimated = source == .localEstimate
+        let (icon, title): (String, String) = {
+            switch source {
+            case .officialApi:   return ("checkmark.seal.fill", l10n.str(.v4SectionTitleOfficial))
+            case .daemonFile:    return ("shield.checkerboard", l10n.str(.v4SectionTitle))
+            default:             return ("exclamationmark.triangle", l10n.str(.v4SectionTitleEstimated))
+            }
+        }()
+
+        return VStack(spacing: 12) {
             HStack {
-                Image(systemName: isEstimated ? "exclamationmark.triangle" : "shield.checkerboard")
-                    .font(.system(size: 14))
-                    .foregroundColor(isEstimated ? theme.warning : theme.textSecondary)
-                Text(isEstimated ? l10n.str(.v4SectionTitleEstimated) : l10n.str(.v4SectionTitle))
+                Image(systemName: icon)
+                    .font(.system(size: 13))
+                    .foregroundColor(source == .officialApi ? theme.primaryGreen : (isEstimated ? theme.warning : theme.textSecondary))
+                Text(title)
                     .sectionTitleFont()
                     .foregroundColor(theme.textSecondary)
                 Spacer()
@@ -607,7 +574,7 @@ struct StatusBarView: View {
             if let resetsAt = detail.resets_at {
                 HStack {
                     Spacer()
-                    Text("\(l10n.str(.v4ResetsAt)) \(resetsAt)")
+                    Text("\(l10n.str(.v4ResetsAt)) \(displayResetsAt(resetsAt))")
                         .font(.system(size: 11))
                         .foregroundColor(theme.textSecondary)
                 }
@@ -646,13 +613,39 @@ struct StatusBarView: View {
         return String(format: l10n.str(.v4PredictHit), formatter.string(from: predicted))
     }
 
-    // ponytail: best-effort parse of human-readable resets_at ("in 1h 23m"); upgrade if the state file ships ISO timestamps
+    /// resets_at 友好化显示：ISO 时间戳转本地时间（今天只显示时刻，跨天带日期）；
+    /// 无法解析（如守护进程的 "in 2h 15m"）则原样返回
+    private func displayResetsAt(_ raw: String) -> String {
+        guard raw.contains("T"), let date = parseResetsAt(raw) else { return raw }
+        let formatter = DateFormatter()
+        if Calendar.current.isDateInToday(date) {
+            formatter.dateFormat = "HH:mm"
+        } else {
+            formatter.dateFormat = "MM-dd HH:mm"
+        }
+        return formatter.string(from: date)
+    }
+
+    /// ISO 时间戳解析（含 OAuth API 的 6 位微秒格式，ISO8601DateFormatter 不支持）
+    private static let microsecondISOFormatters: [DateFormatter] = {
+        ["yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXXXX", "yyyy-MM-dd'T'HH:mm:ssXXXXX"].map { fmt in
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "en_US_POSIX")
+            f.dateFormat = fmt
+            return f
+        }
+    }()
+
+    // best-effort parse：ISO 时间戳（OAuth API / state 文件）或人类可读的 "in 1h 23m"（守护进程）
     private func parseResetsAt(_ value: String?) -> Date? {
         guard let value else { return nil }
         let iso = ISO8601DateFormatter()
         if let date = iso.date(from: value) { return date }
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let date = iso.date(from: value) { return date }
+        for formatter in Self.microsecondISOFormatters {
+            if let date = formatter.date(from: value) { return date }
+        }
         var seconds: TimeInterval = 0
         if let match = value.firstMatch(of: /(\d+)\s*d/), let n = Double(match.1) { seconds += n * 86400 }
         if let match = value.firstMatch(of: /(\d+)\s*h/), let n = Double(match.1) { seconds += n * 3600 }
@@ -660,117 +653,23 @@ struct StatusBarView: View {
         return seconds > 0 ? Date().addingTimeInterval(seconds) : nil
     }
     
-    private var projectsSection: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack {
-                Text(l10n.str(.mcpCallsTitle))
-                    .sectionTitleFont()
-                    .foregroundColor(theme.textSecondary)
-                Spacer()
-                Text(String(format: l10n.str(.mcpHeaderFormat), formatWholeNumber(currentReport.metrics.mcpCalls), "\(currentReport.metrics.servers)"))
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(theme.textSecondary)
-                    .monospacedDigit()
-            }
-            
-            if currentReport.mcp.isEmpty {
-                compactEmptyState(l10n.str(.emptyMcp))
-            } else {
-                let servers = currentReport.mcp.prefix(5)
-                let maxCount = Double(servers.first?.count ?? 1)
-                
-                ForEach(Array(servers.enumerated()), id: \.element.id) { index, server in
-                    let pct = Double(server.count) / max(maxCount, 1)
-                    HStack(spacing: 8) {
-                        Text(server.name)
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .foregroundColor(theme.textMain)
-                            .frame(width: DashboardLayout.rowLabelWidth, alignment: .leading)
-                            .lineLimit(1)
-                        
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous).fill(theme.track)
-                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous)
-                                    .fill(theme.chartGreen)
-                                    .frame(width: geo.size.width * CGFloat(pct))
-                            }
-                        }
-                        .frame(height: DashboardLayout.barHeight)
-                        
-                        Text(formatCompactCount(server.count))
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(theme.textSecondary)
-                            .frame(width: 42, alignment: .trailing)
-                            .monospacedDigit()
-                    }
-                    .frame(height: 20)
-                    .help(server.name)
-                }
-
-                if currentReport.mcp.count > 5 {
-                    Text(String(format: l10n.str(.moreFormat), currentReport.mcp.count - 5))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(theme.textTertiary)
-                }
-            }
-        }
-    }
-    
-    private var skillsSection: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack {
-                Text(l10n.str(.skillCallsTitle))
-                    .sectionTitleFont()
-                    .foregroundColor(theme.textSecondary)
-                Spacer()
-                Text(String(format: l10n.str(.skillHeaderFormat), formatWholeNumber(currentReport.metrics.skillCalls), "\(currentReport.metrics.skills)"))
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(theme.textSecondary)
-                    .monospacedDigit()
-            }
-            
-            if currentReport.skills.isEmpty {
-                compactEmptyState(l10n.str(.emptySkill))
-            } else {
-                let skills = currentReport.skills.prefix(5)
-                let maxCount = Double(skills.first?.count ?? 1)
-                
-                ForEach(Array(skills.enumerated()), id: \.element.id) { index, skill in
-                    let pct = Double(skill.count) / Double(max(maxCount, 1))
-                    HStack(spacing: 8) {
-                        Text(skill.name)
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .foregroundColor(theme.textMain)
-                            .frame(width: DashboardLayout.rowLabelWidth, alignment: .leading)
-                            .lineLimit(1)
-                        
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous).fill(theme.track)
-                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous)
-                                    .fill(theme.lightGreen)
-                                    .frame(width: geo.size.width * CGFloat(pct))
-                            }
-                        }
-                        .frame(height: DashboardLayout.barHeight)
-                        
-                        Text(formatCompactCount(skill.count))
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(theme.textSecondary)
-                            .frame(width: 42, alignment: .trailing)
-                            .monospacedDigit()
-                    }
-                    .frame(height: 20)
-                    .help(skill.name)
-                }
-
-                if currentReport.skills.count > 5 {
-                    Text(String(format: l10n.str(.moreFormat), currentReport.skills.count - 5))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(theme.textTertiary)
-                }
-            }
+    /// MCP / Skill 调用：左右双卡（与 Requests/Cost Trend 同风格）
+    private var mcpSkillCardsSection: some View {
+        HStack(spacing: 10) {
+            CompactStatCard(
+                title: l10n.str(.mcpCallsTitle),
+                value: formatWholeNumber(currentReport.metrics.mcpCalls),
+                subtitle: String(format: l10n.str(.serversFormat), "\(currentReport.metrics.servers)"),
+                items: Array(currentReport.mcp.prefix(3)),
+                emptyText: l10n.str(.emptyMcp)
+            )
+            CompactStatCard(
+                title: l10n.str(.skillCallsTitle),
+                value: formatWholeNumber(currentReport.metrics.skillCalls),
+                subtitle: String(format: l10n.str(.skillsCountFormat), "\(currentReport.metrics.skills)"),
+                items: Array(currentReport.skills.prefix(3)),
+                emptyText: l10n.str(.emptySkill)
+            )
         }
     }
     
@@ -830,35 +729,6 @@ struct StatusBarView: View {
         }
     }
     
-    private var bottomBar: some View {
-        HStack(spacing: 10) {
-            if viewModel.errorMessage != nil {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundColor(theme.warning).imageScale(.small)
-                Text(l10n.str(.noDataError))
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundColor(theme.textSecondary)
-                    .lineLimit(1)
-            }
-            Spacer()
-            Button { showingSettings = true } label: {
-                Image(systemName: "gearshape")
-                    .imageScale(.small)
-            }
-            .buttonStyle(.borderless)
-            .foregroundColor(theme.textSecondary)
-            .help(l10n.str(.settingsHelp))
-            Button(l10n.str(.resetButton)) { viewModel.resetStats() }
-                .font(.system(size: 11.5, weight: .semibold))
-                .buttonStyle(.borderless)
-                .foregroundColor(theme.textSecondary)
-            Button(l10n.str(.quitButton)) { NSApplication.shared.terminate(nil) }
-                .font(.system(size: 11.5, weight: .semibold))
-                .buttonStyle(.borderless)
-                .foregroundColor(theme.textSecondary)
-        }
-        .frame(height: 20)
-    }
-    
     // MARK: - Helpers
 
     private func compactEmptyState(_ text: String) -> some View {
@@ -895,6 +765,13 @@ struct StatusBarView: View {
         if m.hasPrefix("claude-") { return "Claude " + String(m.dropFirst(7).prefix(6)).capitalized }
         return String(m.prefix(15))
     }
+
+    /// 环形图图例用的极短模型名（去掉 "Claude " 前缀，节省横向空间）
+    private func legendModelName(_ full: String) -> String {
+        let short = shortModelName(full)
+        if short.hasPrefix("Claude ") { return String(short.dropFirst(7)) }
+        return short
+    }
     
     private func formatLargeNumber(_ count: Int) -> (value: String, suffix: String) {
         if count == 0 {
@@ -911,15 +788,6 @@ struct StatusBarView: View {
     private func formatLargeNumberStr(_ count: Int) -> String {
         let f = formatLargeNumber(count)
         return f.value + f.suffix
-    }
-
-    private func formatCompactCount(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.0fK", Double(count) / 1_000)
-        }
-        return "\(count)"
     }
 
     private func formatDeltaPercent(_ value: Double) -> String {
@@ -1015,6 +883,8 @@ private struct PeriodButton: View {
             Text(title)
                 .font(.system(size: 11.5, weight: isSelected ? .bold : .semibold))
                 .foregroundColor(isSelected ? theme.segOnText : theme.segOffText)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .padding(.horizontal, 8)
                 .frame(minWidth: 42, minHeight: 22)
                 .background(isSelected ? theme.segOnBg : Color.clear)
@@ -1059,6 +929,68 @@ private struct TrendCard: View {
                     SparklineView(points: [0, 0], color: color)
                         .frame(width: 48, height: 24)
                 }
+            }
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: 70)
+        .background(theme.softCardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+/// MCP/Skill 紧凑统计卡：左侧标题+大数字+副标题，右侧 top-3 迷你列表
+private struct CompactStatCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var theme: Theme { Theme(isDark: colorScheme == .dark) }
+    let title: String
+    let value: String
+    let subtitle: String
+    let items: [NamedCount]
+    let emptyText: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .sectionTitleFont()
+                    .foregroundColor(theme.textSecondary)
+                Text(value)
+                    .font(.system(size: 19, weight: .heavy, design: .rounded))
+                    .foregroundColor(theme.textMain)
+                    .monospacedDigit()
+                Text(subtitle)
+                    .font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(theme.textSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            if items.isEmpty {
+                Text(emptyText)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(theme.textTertiary)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxHeight: .infinity, alignment: .center)
+            } else {
+                VStack(alignment: .trailing, spacing: 3) {
+                    ForEach(items) { item in
+                        HStack(spacing: 4) {
+                            Text(item.name)
+                                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                                .foregroundColor(theme.textSecondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Text("\(item.count)")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundColor(theme.textMain)
+                                .monospacedDigit()
+                        }
+                        .help(item.name)
+                    }
+                }
+                .frame(maxWidth: 80, alignment: .trailing)
             }
         }
         .padding(.horizontal, 11)
