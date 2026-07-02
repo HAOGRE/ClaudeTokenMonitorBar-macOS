@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import ClaudeMonitor
+@testable import ClaudeTokenMonitor
 
 struct ClaudeMonitorTests {
 

@@ -45,42 +45,59 @@ struct Theme {
         return Color(nsColor: isDark ? dark : light)
     }
 
-    var bg: Color { dynamic(light: "#edf2ef", dark: "#111417") }
-    var panelBg: Color { dynamic(light: "#fbfbfa", dark: "#1d2023") }
-    var softCardBg: Color { dynamic(light: "#f0f1f0", dark: "#292d31") }
-    var panelBorder: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.08), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.08)) }
-    
-    var primaryGreen: Color { dynamic(light: "#178a55", dark: "#27b06e") }
-    var chartGreen: Color { dynamic(light: "#178a55", dark: "#27b06e") }
-    var lightGreen: Color { dynamic(light: "#8fd9b4", dark: "#5fcf9c") }
-    
-    var textMain: Color { dynamic(light: NSColor(red: 17/255, green: 22/255, blue: 19/255, alpha: 0.94), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.94)) }
-    var textSecondary: Color { dynamic(light: NSColor(red: 17/255, green: 22/255, blue: 19/255, alpha: 0.48), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.46)) }
-    var textTertiary: Color { dynamic(light: NSColor(red: 17/255, green: 22/255, blue: 19/255, alpha: 0.32), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.28)) }
-    var separator: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.065), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.055)) }
-    var track: Color { dynamic(light: "#eceeed", dark: "#2a2e31") }
-    
-    var segBg: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.05), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.06)) }
-    var segBorder: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.07), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.09)) }
-    var segOnBg: Color { dynamic(light: NSColor(red: 1, green: 1, blue: 1, alpha: 1.0), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.15)) }
-    var segOnText: Color { dynamic(light: "#111111", dark: "#ffffff") }
-    var segOffText: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.5), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.55)) }
-    
-    var gridEmpty: Color { dynamic(light: "#e8ebe8", dark: "#30363a") }
-    var gridLevel1: Color { dynamic(light: "#ccebdc", dark: "#284f3b") }
-    var gridLevel2: Color { dynamic(light: "#9ed9bd", dark: "#33734f") }
-    var gridLevel3: Color { dynamic(light: "#61be87", dark: "#4ea96d") }
-    var gridLevel4: Color { dynamic(light: "#3f8f5a", dark: "#67c583") }
+    var bg: Color { dynamic(light: "#e8efeb", dark: "#111315") }
+    var panelBg: Color { dynamic(light: "#fcfdfc", dark: "#202226") }
+    var softCardBg: Color { dynamic(light: "#eef1ef", dark: "#2a2d31") }
+    var panelBorder: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.06), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.08)) }
+
+    var primaryGreen: Color { dynamic(light: "#4b9665", dark: "#70b687") }
+    var chartGreen: Color { dynamic(light: "#3f8758", dark: "#63a978") }
+    var lightGreen: Color { dynamic(light: "#a7dbc0", dark: "#8ed8ab") }
+
+    var textMain: Color { dynamic(light: NSColor(red: 34/255, green: 38/255, blue: 36/255, alpha: 0.94), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.88)) }
+    var textSecondary: Color { dynamic(light: NSColor(red: 34/255, green: 38/255, blue: 36/255, alpha: 0.48), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.48)) }
+    var textTertiary: Color { dynamic(light: NSColor(red: 34/255, green: 38/255, blue: 36/255, alpha: 0.30), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.28)) }
+    var separator: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.055), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.06)) }
+    var track: Color { dynamic(light: "#ecf0ed", dark: "#2d3034") }
+
+    var segBg: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.055), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.065)) }
+    var segBorder: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.055), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.08)) }
+    var segOnBg: Color { dynamic(light: NSColor(red: 1, green: 1, blue: 1, alpha: 0.95), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.14)) }
+    var segOnText: Color { dynamic(light: "#252a27", dark: "#f1f3f1") }
+    var segOffText: Color { dynamic(light: NSColor(red: 0, green: 0, blue: 0, alpha: 0.48), dark: NSColor(red: 1, green: 1, blue: 1, alpha: 0.50)) }
+
+    var gridEmpty: Color { dynamic(light: "#e0e8e2", dark: "#2f3935") }
+    var gridLevel1: Color { dynamic(light: "#c8e0d0", dark: "#345941") }
+    var gridLevel2: Color { dynamic(light: "#9fcfae", dark: "#477c5a") }
+    var gridLevel3: Color { dynamic(light: "#6fb584", dark: "#5ea872") }
+    var gridLevel4: Color { dynamic(light: "#3f8758", dark: "#78c18e") }
     
     var palette: [Color] {
         [
             chartGreen,
             lightGreen,
-            dynamic(light: "#aeb8b2", dark: "#5a6660"),
-            dynamic(light: "#70c39a", dark: "#40be84"),
-            dynamic(light: "#a0e0c0", dark: "#7ce3b1")
+            dynamic(light: "#50605a", dark: "#5f6964"),
+            dynamic(light: "#73bf8a", dark: "#7ed29c"),
+            dynamic(light: "#b8e2c9", dark: "#a8dfbd")
         ]
     }
+}
+
+private enum DashboardLayout {
+    static let panelWidth: CGFloat = 400
+    static let panelHeight: CGFloat = 760
+    static let panelRadius: CGFloat = 18
+    static let horizontalPadding: CGFloat = 16
+    static let sectionSpacing: CGFloat = 12
+    static let sectionTitleSize: CGFloat = 10.5
+    static let rowLabelWidth: CGFloat = 116
+    static let rowValueWidth: CGFloat = 50
+    static let rowPercentWidth: CGFloat = 32
+    static let barHeight: CGFloat = 5
+    static let heatmapCell: CGFloat = 9
+    static let heatmapGap: CGFloat = 3
+    static let heatmapWeeks: Int = 26
+    static let heatmapRows: Int = 7
 }
 
 struct StatusBarView: View {
@@ -144,7 +161,7 @@ struct StatusBarView: View {
             headerSection
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 14) {
+                VStack(spacing: DashboardLayout.sectionSpacing) {
                     heroSection
                     splitBarSection
                     barChartSection
@@ -158,12 +175,12 @@ struct StatusBarView: View {
                     sectionDivider
                     trendCardsSection
 
-                    if settings.showProjectSection && currentReport.metrics.servers > 0 {
+                    if settings.showProjectSection {
                         sectionDivider
                         projectsSection
                     }
 
-                    if settings.showRecentSection && currentReport.metrics.skills > 0 {
+                    if settings.showRecentSection {
                         sectionDivider
                         skillsSection
                     }
@@ -173,15 +190,15 @@ struct StatusBarView: View {
 
                     bottomBar
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
+                .padding(.horizontal, DashboardLayout.horizontalPadding)
+                .padding(.bottom, DashboardLayout.horizontalPadding)
             }
         }
-        .frame(width: 400, height: 760)
+        .frame(width: DashboardLayout.panelWidth, height: DashboardLayout.panelHeight)
         .background(theme.panelBg)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: DashboardLayout.panelRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: DashboardLayout.panelRadius, style: .continuous)
                 .stroke(theme.panelBorder, lineWidth: 1)
         )
     }
@@ -189,20 +206,21 @@ struct StatusBarView: View {
     // MARK: - Sections
     
     private var headerSection: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "chart.bar.fill")
-                    .font(.system(size: 12, weight: .bold))
+                Image(systemName: "chart.bar")
+                    .font(.system(size: 11, weight: .heavy))
                     .foregroundColor(theme.primaryGreen)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 18, height: 18)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .stroke(theme.primaryGreen, lineWidth: 1.5)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .stroke(theme.primaryGreen, lineWidth: 1.4)
                     )
                 Text("Tokenscope")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(theme.textMain)
             }
+            .frame(minWidth: 116, alignment: .leading)
 
             Spacer()
 
@@ -219,7 +237,7 @@ struct StatusBarView: View {
                     .stroke(theme.segBorder, lineWidth: 1)
             )
 
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 headerIconButton(
                     systemName: effectiveColorScheme == .dark ? "moon.fill" : "sun.max",
                     help: "Toggle theme",
@@ -232,21 +250,21 @@ struct StatusBarView: View {
                 )
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 10)
+        .padding(.horizontal, DashboardLayout.horizontalPadding)
+        .padding(.top, DashboardLayout.horizontalPadding)
+        .padding(.bottom, 9)
     }
 
     private func headerIconButton(systemName: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(theme.textSecondary)
-                .frame(width: 28, height: 28)
+                .frame(width: 26, height: 26)
                 .background(theme.segBg)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
                         .stroke(theme.segBorder, lineWidth: 1)
                 )
         }
@@ -277,61 +295,61 @@ struct StatusBarView: View {
     }
     
     private var heroSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("TOTAL TOKENS")
-                        .font(.system(size: 11, weight: .bold))
+                        .sectionTitleFont()
                         .foregroundColor(theme.textSecondary)
                     
-                    HStack(alignment: .lastTextBaseline, spacing: 4) {
+                    HStack(alignment: .lastTextBaseline, spacing: 5) {
                         let formatted = formatLargeNumber(currentReport.metrics.totalTokens)
                         Text(formatted.value)
-                            .font(.system(size: 38, weight: .bold, design: .rounded))
+                            .font(.system(size: 34, weight: .heavy, design: .rounded))
                             .foregroundColor(theme.textMain)
                             .monospacedDigit()
                         Text(formatted.suffix)
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .font(.system(size: 16, weight: .heavy, design: .rounded))
                             .foregroundColor(theme.textSecondary)
                         
                         let delta = currentReport.metrics.deltaTokens
                         HStack(spacing: 2) {
                             if delta == 0 {
-                                Text("0%").font(.system(size: 10, weight: .bold))
+                                Text("0%").font(.system(size: 9.5, weight: .bold))
                             } else {
                                 Image(systemName: delta > 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-                                    .font(.system(size: 8))
+                                    .font(.system(size: 7.5))
                                 Text(formatDeltaPercent(delta))
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 9.5, weight: .bold))
                             }
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 3)
                         .background(theme.primaryGreen.opacity(0.15))
                         .foregroundColor(theme.primaryGreen)
                         .cornerRadius(4)
-                        .padding(.bottom, 8)
+                        .padding(.bottom, 5)
                     }
                 }
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 4) {
+                VStack(alignment: .trailing, spacing: 5) {
                     Text("Est. cost")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 10.5, weight: .bold))
                         .foregroundColor(theme.textSecondary)
                     Text(MonitoringViewModel.formatCost(currentReport.metrics.cost))
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .font(.system(size: 22, weight: .heavy, design: .rounded))
                         .foregroundColor(theme.primaryGreen)
                         .monospacedDigit()
                 }
-                .padding(.top, 14)
+                .padding(.top, 18)
             }
         }
     }
     
     private var splitBarSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 7) {
             let total = max(1, currentReport.metrics.inputTokens + currentReport.metrics.outputTokens)
             let inRatio = Double(currentReport.metrics.inputTokens) / Double(total)
             let outRatio = Double(currentReport.metrics.outputTokens) / Double(total)
@@ -348,23 +366,22 @@ struct StatusBarView: View {
                     }
                 }
             }
-            .frame(height: 8)
+            .frame(height: 7)
             
-            HStack {
+            HStack(spacing: 10) {
                 HStack(spacing: 4) {
-                    Circle().fill(theme.chartGreen).frame(width: 8, height: 8)
+                    Circle().fill(theme.chartGreen).frame(width: 7, height: 7)
                     Text("Input \(formatLargeNumberStr(currentReport.metrics.inputTokens))")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .font(.system(size: 10.5, weight: .medium, design: .monospaced))
                         .foregroundColor(theme.textSecondary)
                 }
                 Spacer()
                 HStack(spacing: 4) {
-                    Circle().fill(theme.lightGreen).frame(width: 8, height: 8)
+                    Circle().fill(theme.lightGreen).frame(width: 7, height: 7)
                     Text("Output \(formatLargeNumberStr(currentReport.metrics.outputTokens))")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .font(.system(size: 10.5, weight: .medium, design: .monospaced))
                         .foregroundColor(theme.textSecondary)
                 }
-                Spacer()
             }
         }
     }
@@ -391,21 +408,18 @@ struct StatusBarView: View {
                         .foregroundStyle(theme.separator)
                 }
             }
-            .frame(height: 112)
+            .frame(height: 104)
         }
     }
     
     private var tokensByModelSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 9) {
             Text("TOKENS BY MODEL")
-                .font(.system(size: 11, weight: .bold))
+                .sectionTitleFont()
                 .foregroundColor(theme.textSecondary)
             
             if currentReport.models.isEmpty {
-                Text("No usage in this period")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundColor(theme.textSecondary.opacity(0.6))
-                    .padding(.vertical, 8)
+                compactEmptyState("No usage in this period")
             } else {
                 let total = max(1, currentReport.metrics.totalTokens)
                 ForEach(Array(currentReport.models.prefix(5).enumerated()), id: \.element.id) { index, model in
@@ -413,87 +427,86 @@ struct StatusBarView: View {
                     HStack(spacing: 8) {
                         RoundedRectangle(cornerRadius: 2, style: .continuous)
                             .fill(theme.palette[index % theme.palette.count])
-                            .frame(width: 8, height: 8)
+                            .frame(width: 7, height: 7)
                         Text(shortModelName(model.name))
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundColor(theme.textMain)
-                            .frame(width: 112, alignment: .leading)
+                            .frame(width: DashboardLayout.rowLabelWidth, alignment: .leading)
                             .lineLimit(1)
                         
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(theme.track)
-                                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous).fill(theme.track)
+                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous)
                                     .fill(theme.palette[index % theme.palette.count])
                                     .frame(width: geo.size.width * CGFloat(pct))
                             }
                         }
-                        .frame(height: 5)
+                        .frame(height: DashboardLayout.barHeight)
                         
                         Text(formatLargeNumberStr(model.tokens))
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(theme.textSecondary)
-                            .frame(width: 45, alignment: .trailing)
+                            .frame(width: DashboardLayout.rowValueWidth, alignment: .trailing)
                             .monospacedDigit()
                             
                         Text("\(Int(pct * 100))%")
                             .font(.system(size: 11, weight: .bold, design: .monospaced))
                             .foregroundColor(theme.textMain)
-                            .frame(width: 35, alignment: .trailing)
+                            .frame(width: DashboardLayout.rowPercentWidth, alignment: .trailing)
                             .monospacedDigit()
                     }
+                    .frame(height: 22)
                 }
             }
         }
     }
     
     private var costByModelSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("COST BY MODEL")
-                .font(.system(size: 11, weight: .bold))
+                .sectionTitleFont()
                 .foregroundColor(theme.textSecondary)
             
             if currentReport.models.isEmpty {
-                Text("-")
-                    .font(.system(size: 16, weight: .medium, design: .monospaced))
-                    .foregroundColor(theme.textSecondary.opacity(0.6))
-                    .padding(.vertical, 8)
+                compactEmptyState("No model costs in this period")
             } else {
-                HStack(spacing: 18) {
+                HStack(spacing: 16) {
                     ZStack {
                         Chart {
                             ForEach(Array(currentReport.models.prefix(5).enumerated()), id: \.element.id) { index, model in
-                            SectorMark(
-                                angle: .value("Cost", model.cost),
-                                innerRadius: .ratio(0.7),
-                                angularInset: 1.5
-                            )
-                            .foregroundStyle(theme.palette[index % theme.palette.count])
+                                SectorMark(
+                                    angle: .value("Cost", model.cost),
+                                    innerRadius: .ratio(0.7),
+                                    angularInset: 1.5
+                                )
+                                .foregroundStyle(theme.palette[index % theme.palette.count])
                             }
                         }
                         Text(MonitoringViewModel.formatCost(currentReport.metrics.cost))
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .font(.system(size: 17, weight: .heavy, design: .rounded))
                             .foregroundColor(theme.textMain)
                             .monospacedDigit()
                     }
-                    .frame(width: 104, height: 104)
+                    .frame(width: 100, height: 100)
                     
-                    VStack(spacing: 7) {
+                    VStack(spacing: 6) {
                         ForEach(Array(currentReport.models.prefix(5).enumerated()), id: \.element.id) { index, model in
                             HStack(spacing: 8) {
                                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                                     .fill(theme.palette[index % theme.palette.count])
-                                    .frame(width: 8, height: 8)
+                                    .frame(width: 7, height: 7)
                                 Text(shortModelName(model.name))
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 11.5, weight: .bold, design: .rounded))
                                     .foregroundColor(theme.textMain)
                                     .lineLimit(1)
                                 Spacer()
                                 Text(MonitoringViewModel.formatCost(model.cost))
-                                    .font(.system(size: 11, design: .monospaced))
+                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
                                     .foregroundColor(theme.textSecondary)
                                     .monospacedDigit()
                             }
+                            .frame(height: 17)
                         }
                     }
                 }
@@ -502,7 +515,7 @@ struct StatusBarView: View {
     }
     
     private var trendCardsSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             HStack(spacing: 10) {
                 TrendCard(
                     title: "REQUESTS",
@@ -537,7 +550,7 @@ struct StatusBarView: View {
                     .font(.system(size: 14))
                     .foregroundColor(theme.textSecondary)
                 Text("OFFICIAL RATE LIMITS (V4)")
-                    .font(.system(size: 11, weight: .bold))
+                    .sectionTitleFont()
                     .foregroundColor(theme.textSecondary)
                 Spacer()
             }
@@ -582,10 +595,10 @@ struct StatusBarView: View {
     }
     
     private var projectsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Text("MCP CALLS")
-                    .font(.system(size: 11, weight: .bold))
+                    .sectionTitleFont()
                     .foregroundColor(theme.textSecondary)
                 Spacer()
                 Text("\(formatWholeNumber(currentReport.metrics.mcpCalls)) · \(currentReport.metrics.servers) servers")
@@ -595,9 +608,7 @@ struct StatusBarView: View {
             }
             
             if currentReport.mcp.isEmpty {
-                Text("No MCP calls in this period")
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(theme.textSecondary.opacity(0.6))
+                compactEmptyState("No MCP calls in this period")
             } else {
                 let servers = currentReport.mcp.prefix(5)
                 let maxCount = Double(servers.first?.count ?? 1)
@@ -608,25 +619,26 @@ struct StatusBarView: View {
                         Text(server.name)
                             .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .foregroundColor(theme.textMain)
-                            .frame(width: 112, alignment: .leading)
+                            .frame(width: DashboardLayout.rowLabelWidth, alignment: .leading)
                             .lineLimit(1)
                         
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(theme.track)
-                                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous).fill(theme.track)
+                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous)
                                     .fill(theme.chartGreen)
                                     .frame(width: geo.size.width * CGFloat(pct))
                             }
                         }
-                        .frame(height: 5)
+                        .frame(height: DashboardLayout.barHeight)
                         
                         Text(formatCompactCount(server.count))
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(theme.textSecondary)
                             .frame(width: 42, alignment: .trailing)
                             .monospacedDigit()
                     }
+                    .frame(height: 20)
                     .help(server.name)
                 }
 
@@ -640,10 +652,10 @@ struct StatusBarView: View {
     }
     
     private var skillsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Text("SKILL CALLS")
-                    .font(.system(size: 11, weight: .bold))
+                    .sectionTitleFont()
                     .foregroundColor(theme.textSecondary)
                 Spacer()
                 Text("\(formatWholeNumber(currentReport.metrics.skillCalls)) · \(currentReport.metrics.skills) skills")
@@ -653,9 +665,7 @@ struct StatusBarView: View {
             }
             
             if currentReport.skills.isEmpty {
-                Text("No skill calls in this period")
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(theme.textSecondary.opacity(0.6))
+                compactEmptyState("No skill calls in this period")
             } else {
                 let skills = currentReport.skills.prefix(5)
                 let maxCount = Double(skills.first?.count ?? 1)
@@ -666,25 +676,26 @@ struct StatusBarView: View {
                         Text(skill.name)
                             .font(.system(size: 12, weight: .bold, design: .monospaced))
                             .foregroundColor(theme.textMain)
-                            .frame(width: 112, alignment: .leading)
+                            .frame(width: DashboardLayout.rowLabelWidth, alignment: .leading)
                             .lineLimit(1)
                         
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(theme.track)
-                                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous).fill(theme.track)
+                                RoundedRectangle(cornerRadius: DashboardLayout.barHeight / 2, style: .continuous)
                                     .fill(theme.lightGreen)
                                     .frame(width: geo.size.width * CGFloat(pct))
                             }
                         }
-                        .frame(height: 5)
+                        .frame(height: DashboardLayout.barHeight)
                         
                         Text(formatCompactCount(skill.count))
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(theme.textSecondary)
                             .frame(width: 42, alignment: .trailing)
                             .monospacedDigit()
                     }
+                    .frame(height: 20)
                     .help(skill.name)
                 }
 
@@ -698,74 +709,105 @@ struct StatusBarView: View {
     }
     
     private var heatmapSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 9) {
             Text("DAILY ACTIVITY")
-                .font(.system(size: 11, weight: .bold))
+                .sectionTitleFont()
                 .foregroundColor(theme.textSecondary)
 
             let heatmap = viewModel.monitoringData.dashboard.heatmap
             if heatmap.isEmpty {
-                Text("No data")
-                    .font(.caption)
-                    .foregroundColor(theme.textSecondary)
+                compactEmptyState("No daily activity")
             } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 0) {
-                        ForEach(heatmapMonthLabels(heatmap), id: \.self) { month in
-                            Text(month)
-                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                let weeks = heatmapWeeks(heatmap)
+                let gridWidth = heatmapGridWidth(weekCount: weeks.count)
+                VStack(alignment: .leading, spacing: 5) {
+                    ZStack(alignment: .leading) {
+                        ForEach(heatmapMonthMarkers(weeks)) { marker in
+                            Text(marker.label)
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
                                 .foregroundColor(theme.textTertiary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .offset(x: CGFloat(marker.weekIndex) * (DashboardLayout.heatmapCell + DashboardLayout.heatmapGap))
                         }
                     }
+                    .frame(width: gridWidth, height: 11, alignment: .leading)
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        let rows = Array(repeating: GridItem(.fixed(10), spacing: 3), count: 7)
-                        LazyHGrid(rows: rows, spacing: 3) {
-                            ForEach(heatmap) { day in
-                                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                    .fill(colorForLevel(day.level))
-                                    .frame(width: 10, height: 10)
-                                    .help(heatmapHelp(for: day))
+                    HStack(alignment: .top, spacing: DashboardLayout.heatmapGap) {
+                        ForEach(Array(weeks.enumerated()), id: \.offset) { _, week in
+                            VStack(spacing: DashboardLayout.heatmapGap) {
+                                ForEach(0..<DashboardLayout.heatmapRows, id: \.self) { dayIndex in
+                                    heatmapCell(dayIndex < week.count ? week[dayIndex] : nil)
+                                }
                             }
                         }
                     }
+                    .frame(width: gridWidth, alignment: .leading)
 
                     HStack(spacing: 4) {
                         Spacer()
                         Text("Less")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundColor(theme.textTertiary)
                             .padding(.trailing, 2)
                         ForEach(0..<5) { level in
                             RoundedRectangle(cornerRadius: 2, style: .continuous)
                                 .fill(colorForLevel(level))
-                                .frame(width: 10, height: 10)
+                                .frame(width: DashboardLayout.heatmapCell, height: DashboardLayout.heatmapCell)
                         }
                         Text("More")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundColor(theme.textTertiary)
                             .padding(.leading, 2)
                     }
+                    .frame(width: gridWidth, alignment: .trailing)
                 }
             }
         }
     }
     
     private var bottomBar: some View {
-        HStack {
+        HStack(spacing: 10) {
             if viewModel.errorMessage != nil {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.orange).imageScale(.small)
-                Text(l10n.str(.noDataError)).font(.caption2).foregroundColor(.secondary).lineLimit(1)
+                Text(l10n.str(.noDataError))
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundColor(theme.textSecondary)
+                    .lineLimit(1)
             }
             Spacer()
-            Button { showingSettings = true } label: { Image(systemName: "gearshape").imageScale(.small) }.buttonStyle(.borderless).foregroundColor(.secondary)
-            Button(l10n.str(.resetButton)) { viewModel.resetStats() }.font(.caption).buttonStyle(.borderless).foregroundColor(.secondary)
-            Button(l10n.str(.quitButton)) { NSApplication.shared.terminate(nil) }.font(.caption).buttonStyle(.borderless).foregroundColor(.secondary)
+            Button { showingSettings = true } label: {
+                Image(systemName: "gearshape")
+                    .imageScale(.small)
+            }
+            .buttonStyle(.borderless)
+            .foregroundColor(theme.textSecondary)
+            .help("Settings")
+            Button(l10n.str(.resetButton)) { viewModel.resetStats() }
+                .font(.system(size: 11.5, weight: .semibold))
+                .buttonStyle(.borderless)
+                .foregroundColor(theme.textSecondary)
+            Button(l10n.str(.quitButton)) { NSApplication.shared.terminate(nil) }
+                .font(.system(size: 11.5, weight: .semibold))
+                .buttonStyle(.borderless)
+                .foregroundColor(theme.textSecondary)
         }
+        .frame(height: 20)
     }
     
     // MARK: - Helpers
+
+    private func compactEmptyState(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11, weight: .medium, design: .monospaced))
+            .foregroundColor(theme.textSecondary.opacity(0.6))
+            .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
+    }
+
+    private func heatmapCell(_ day: HeatDay?) -> some View {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+            .fill(day.map { colorForLevel($0.level) } ?? Color.clear)
+            .frame(width: DashboardLayout.heatmapCell, height: DashboardLayout.heatmapCell)
+            .help(day.map(heatmapHelp) ?? "")
+    }
     
     private func colorForLevel(_ level: Int) -> Color {
         switch level {
@@ -828,24 +870,46 @@ struct StatusBarView: View {
         return formatter.string(from: NSNumber(value: count)) ?? "\(count)"
     }
 
-    private func heatmapMonthLabels(_ heatmap: [HeatDay]) -> [String] {
+    private func heatmapWeeks(_ heatmap: [HeatDay]) -> [[HeatDay?]] {
+        let days = Array(heatmap.suffix(DashboardLayout.heatmapWeeks * DashboardLayout.heatmapRows))
+        var weeks: [[HeatDay?]] = []
+        var index = 0
+        while index < days.count {
+            let end = min(index + DashboardLayout.heatmapRows, days.count)
+            var week = days[index..<end].map(Optional.some)
+            if week.count < DashboardLayout.heatmapRows {
+                week.append(contentsOf: Array(repeating: nil, count: DashboardLayout.heatmapRows - week.count))
+            }
+            weeks.append(week)
+            index += DashboardLayout.heatmapRows
+        }
+        return weeks
+    }
+
+    private func heatmapGridWidth(weekCount: Int) -> CGFloat {
+        guard weekCount > 0 else { return 0 }
+        return CGFloat(weekCount) * DashboardLayout.heatmapCell + CGFloat(max(weekCount - 1, 0)) * DashboardLayout.heatmapGap
+    }
+
+    private func heatmapMonthMarkers(_ weeks: [[HeatDay?]]) -> [HeatmapMonthMarker] {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "MMM"
 
-        var labels: [String] = []
+        var markers: [HeatmapMonthMarker] = []
         var lastMonth: Int?
         let calendar = Calendar.current
 
-        for day in heatmap {
+        for (weekIndex, week) in weeks.enumerated() {
+            guard let day = week.compactMap({ $0 }).first else { continue }
             let month = calendar.component(.month, from: day.date)
             if month != lastMonth {
-                labels.append(formatter.string(from: day.date))
+                markers.append(HeatmapMonthMarker(weekIndex: weekIndex, label: formatter.string(from: day.date)))
                 lastMonth = month
             }
         }
 
-        return labels.isEmpty ? [""] : labels
+        return markers
     }
 
     private func heatmapHelp(for day: HeatDay) -> String {
@@ -858,6 +922,20 @@ struct StatusBarView: View {
 
 // MARK: - Subcomponents
 
+private struct HeatmapMonthMarker: Identifiable {
+    let weekIndex: Int
+    let label: String
+
+    var id: String { "\(weekIndex)-\(label)" }
+}
+
+private extension Text {
+    func sectionTitleFont() -> some View {
+        self
+            .font(.system(size: DashboardLayout.sectionTitleSize, weight: .bold))
+    }
+}
+
 private struct PeriodButton: View {
     @Environment(\.colorScheme) private var colorScheme
     var theme: Theme { Theme(isDark: colorScheme == .dark) }
@@ -869,12 +947,12 @@ private struct PeriodButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 12, weight: isSelected ? .bold : .semibold))
+                .font(.system(size: 11.5, weight: isSelected ? .bold : .semibold))
                 .foregroundColor(isSelected ? theme.segOnText : theme.segOffText)
-                .frame(width: 44, height: 22)
+                .frame(width: 42, height: 22)
                 .background(isSelected ? theme.segOnBg : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                .shadow(color: isSelected ? Color.black.opacity(0.12) : Color.clear, radius: 1, y: 1)
+                .shadow(color: isSelected ? Color.black.opacity(colorScheme == .dark ? 0.18 : 0.10) : Color.clear, radius: 1, y: 1)
         }
         .buttonStyle(.plain)
     }
@@ -894,30 +972,30 @@ private struct TrendCard: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 11, weight: .bold))
+                        .sectionTitleFont()
                         .foregroundColor(theme.textSecondary)
                     Text(value)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 19, weight: .heavy, design: .rounded))
                         .foregroundColor(title == "COST TREND" ? theme.primaryGreen : theme.textMain)
                         .monospacedDigit()
                     Text(subtitle)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 10.5, weight: .medium, design: .monospaced))
                         .foregroundColor(theme.textSecondary)
                 }
                 Spacer()
                 
-                // Sparkline
                 if points.count > 1 {
                     SparklineView(points: points, color: color)
-                        .frame(width: 50, height: 24)
+                        .frame(width: 48, height: 24)
                 } else {
                     SparklineView(points: [0, 0], color: color)
-                        .frame(width: 50, height: 24)
+                        .frame(width: 48, height: 24)
                 }
             }
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, minHeight: 72)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: 70)
         .background(theme.softCardBg)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
