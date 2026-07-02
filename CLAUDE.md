@@ -20,10 +20,10 @@
 
 ```swift
 // 在 pricingConfigs 数组中添加新模型配置
-// 格式：(关键字, 是否前缀匹配, 定价)
-// 注意：更具体的型号放在前面（前缀匹配优先）
+// 格式：(关键字, 定价)，按数组顺序做包含匹配
+// 注意：更具体的型号放在前面（如 opus-4-9 必须在 opus 之前）
 
-("new-model-4-9", true, ModelPricing(input: X.0, output: Y.0, cacheCreation: Z.0, cacheRead: W.0)),
+("new-model-4-9", ModelPricing(input: X.0, output: Y.0, cacheCreation: Z.0, cacheRead: W.0)),
 ```
 
 ### 1.3 更新模型显示名称（可选）

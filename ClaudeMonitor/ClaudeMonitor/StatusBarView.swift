@@ -121,9 +121,9 @@ struct StatusBarView: View {
     
     private var trendSubtitle: String {
         switch selectedPeriod {
-        case 0: return "today"
-        case 1: return "last 7 days"
-        default: return "this month"
+        case 0: return l10n.str(.trendToday)
+        case 1: return l10n.str(.trendThisWeek)
+        default: return l10n.str(.trendThisMonth)
         }
     }
     
@@ -206,9 +206,9 @@ struct StatusBarView: View {
             Spacer()
 
             HStack(spacing: 2) {
-                PeriodButton(title: "Day", isSelected: selectedPeriod == 0) { selectedPeriod = 0 }
-                PeriodButton(title: "Week", isSelected: selectedPeriod == 1) { selectedPeriod = 1 }
-                PeriodButton(title: "Month", isSelected: selectedPeriod == 2) { selectedPeriod = 2 }
+                PeriodButton(title: l10n.str(.periodDay), isSelected: selectedPeriod == 0) { selectedPeriod = 0 }
+                PeriodButton(title: l10n.str(.periodWeek), isSelected: selectedPeriod == 1) { selectedPeriod = 1 }
+                PeriodButton(title: l10n.str(.periodMonth), isSelected: selectedPeriod == 2) { selectedPeriod = 2 }
             }
             .padding(2)
             .background(theme.segBg)
@@ -221,7 +221,7 @@ struct StatusBarView: View {
             HStack(spacing: 4) {
                 headerIconButton(
                     systemName: "square.and.arrow.up",
-                    help: "Copy panel snapshot",
+                    help: l10n.str(.copySnapshotHelp),
                     action: copyPanelSnapshot
                 )
             }
@@ -249,7 +249,12 @@ struct StatusBarView: View {
     }
 
     private func copyPanelSnapshot() {
-        guard let contentView = NSApp.keyWindow?.contentView else { return }
+        // MenuBarExtra 面板不一定是 keyWindow，按面板宽度在可见窗口中查找
+        let panelWindow = NSApp.keyWindow
+            ?? NSApp.windows.first { window in
+                window.isVisible && abs((window.contentView?.bounds.width ?? 0) - DashboardLayout.panelWidth) < 1
+            }
+        guard let contentView = panelWindow?.contentView else { return }
         let bounds = contentView.bounds
         guard let bitmap = contentView.bitmapImageRepForCachingDisplay(in: bounds) else { return }
         contentView.cacheDisplay(in: bounds, to: bitmap)
@@ -270,7 +275,7 @@ struct StatusBarView: View {
         VStack(spacing: 6) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("TOTAL TOKENS")
+                    Text(l10n.str(.totalTokensTitle))
                         .sectionTitleFont()
                         .foregroundColor(theme.textSecondary)
                     
@@ -307,7 +312,7 @@ struct StatusBarView: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 5) {
-                    Text("Est. cost")
+                    Text(l10n.str(.estCost))
                         .font(.system(size: 10.5, weight: .bold))
                         .foregroundColor(theme.textSecondary)
                     Text(MonitoringViewModel.formatCost(currentReport.metrics.cost))
@@ -322,16 +327,21 @@ struct StatusBarView: View {
     
     private var splitBarSection: some View {
         VStack(spacing: 7) {
-            let total = max(1, currentReport.metrics.inputTokens + currentReport.metrics.outputTokens)
-            let inRatio = Double(currentReport.metrics.inputTokens) / Double(total)
-            let outRatio = Double(currentReport.metrics.outputTokens) / Double(total)
-            
+            // 三段 Input / Cache / Output，与 TOTAL TOKENS（含 cache）口径一致
+            let metrics = currentReport.metrics
+            let cacheColor = theme.palette[3]
+            let total = max(1, metrics.inputTokens + metrics.cacheTokens + metrics.outputTokens)
+            let inRatio = Double(metrics.inputTokens) / Double(total)
+            let cacheRatio = Double(metrics.cacheTokens) / Double(total)
+            let outRatio = Double(metrics.outputTokens) / Double(total)
+
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4).fill(theme.track)
-                    if currentReport.metrics.totalTokens > 0 {
+                    if metrics.totalTokens > 0 {
                         HStack(spacing: 0) {
                             theme.chartGreen.frame(width: geo.size.width * CGFloat(inRatio))
+                            cacheColor.frame(width: geo.size.width * CGFloat(cacheRatio))
                             theme.lightGreen.frame(width: geo.size.width * CGFloat(outRatio))
                         }
                         .cornerRadius(4)
@@ -339,18 +349,25 @@ struct StatusBarView: View {
                 }
             }
             .frame(height: 7)
-            
+
             HStack(spacing: 10) {
                 HStack(spacing: 4) {
                     Circle().fill(theme.chartGreen).frame(width: 7, height: 7)
-                    Text("Input \(formatLargeNumberStr(currentReport.metrics.inputTokens))")
+                    Text("\(l10n.str(.inputLabel)) \(formatLargeNumberStr(metrics.inputTokens))")
+                        .font(.system(size: 10.5, weight: .medium, design: .monospaced))
+                        .foregroundColor(theme.textSecondary)
+                }
+                Spacer()
+                HStack(spacing: 4) {
+                    Circle().fill(cacheColor).frame(width: 7, height: 7)
+                    Text("\(l10n.str(.cacheLabel)) \(formatLargeNumberStr(metrics.cacheTokens))")
                         .font(.system(size: 10.5, weight: .medium, design: .monospaced))
                         .foregroundColor(theme.textSecondary)
                 }
                 Spacer()
                 HStack(spacing: 4) {
                     Circle().fill(theme.lightGreen).frame(width: 7, height: 7)
-                    Text("Output \(formatLargeNumberStr(currentReport.metrics.outputTokens))")
+                    Text("\(l10n.str(.outputLabel)) \(formatLargeNumberStr(metrics.outputTokens))")
                         .font(.system(size: 10.5, weight: .medium, design: .monospaced))
                         .foregroundColor(theme.textSecondary)
                 }
@@ -359,19 +376,29 @@ struct StatusBarView: View {
     }
     
     private var barChartSection: some View {
-        VStack {
+        // X 轴分类值必须用唯一的 full 字段：label 大量为空字符串，
+        // Swift Charts 会把相同分类值堆到同一根柱（Day/Month 视图曾因此柱子合并）
+        let sparseMarks = currentReport.series.filter { !$0.label.isEmpty }
+        let labelByFull = Dictionary(sparseMarks.map { ($0.full, $0.label) }, uniquingKeysWith: { first, _ in first })
+
+        return VStack {
             Chart(currentReport.series) { item in
-                BarMark(x: .value("Time", item.label), y: .value("Input", item.input))
+                BarMark(x: .value("Time", item.full), y: .value("Input", item.input))
                     .foregroundStyle(theme.chartGreen)
-                BarMark(x: .value("Time", item.label), y: .value("Output", item.output))
+                BarMark(x: .value("Time", item.full), y: .value("Output", item.output))
                     .foregroundStyle(theme.lightGreen)
             }
             .chartLegend(.hidden)
             .chartXAxis {
-                AxisMarks { value in
-                    AxisValueLabel()
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(theme.textSecondary)
+                // 只在有 label 的位置显示稀疏刻度（如 Day 视图每 4 小时一个）
+                AxisMarks(values: sparseMarks.map(\.full)) { value in
+                    AxisValueLabel {
+                        if let full = value.as(String.self), let label = labelByFull[full] {
+                            Text(label)
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(theme.textSecondary)
+                        }
+                    }
                 }
             }
             .chartYAxis {
@@ -386,12 +413,12 @@ struct StatusBarView: View {
     
     private var tokensByModelSection: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("TOKENS BY MODEL")
+            Text(l10n.str(.tokensByModel))
                 .sectionTitleFont()
                 .foregroundColor(theme.textSecondary)
-            
+
             if currentReport.models.isEmpty {
-                compactEmptyState("No usage in this period")
+                compactEmptyState(l10n.str(.emptyUsage))
             } else {
                 let total = max(1, currentReport.metrics.totalTokens)
                 ForEach(Array(currentReport.models.prefix(5).enumerated()), id: \.element.id) { index, model in
@@ -436,12 +463,12 @@ struct StatusBarView: View {
     
     private var costByModelSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("COST BY MODEL")
+            Text(l10n.str(.costByModel))
                 .sectionTitleFont()
                 .foregroundColor(theme.textSecondary)
-            
+
             if currentReport.models.isEmpty {
-                compactEmptyState("No model costs in this period")
+                compactEmptyState(l10n.str(.emptyModelCost))
             } else {
                 HStack(spacing: 16) {
                     ZStack {
@@ -490,18 +517,20 @@ struct StatusBarView: View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
                 TrendCard(
-                    title: "REQUESTS",
+                    title: l10n.str(.requestsTitle),
                     value: formatWholeNumber(currentReport.metrics.requests),
-                    subtitle: "\(formatWholeNumber(currentReport.metrics.sessions)) sessions",
+                    subtitle: String(format: l10n.str(.sessionsFormat), formatWholeNumber(currentReport.metrics.sessions)),
                     points: currentReport.reqTrend,
-                    color: theme.primaryGreen
+                    color: theme.primaryGreen,
+                    valueColor: nil
                 )
                 TrendCard(
-                    title: "COST TREND",
+                    title: l10n.str(.costTrendTitle),
                     value: MonitoringViewModel.formatCost(currentReport.metrics.cost),
                     subtitle: trendSubtitle,
                     points: currentReport.costTrend,
-                    color: theme.primaryGreen
+                    color: theme.primaryGreen,
+                    valueColor: theme.primaryGreen
                 )
             }
 
@@ -570,7 +599,7 @@ struct StatusBarView: View {
 
                     RoundedRectangle(cornerRadius: 3)
                         .fill(percentage > 90 ? theme.danger : (percentage > 75 ? theme.warning : theme.primaryGreen))
-                        .frame(width: max(0, geo.size.width * CGFloat(percentage / 100)), height: 6)
+                        .frame(width: max(0, geo.size.width * CGFloat(min(percentage, 100) / 100)), height: 6)
                 }
             }
             .frame(height: 6)
@@ -634,18 +663,18 @@ struct StatusBarView: View {
     private var projectsSection: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                Text("MCP CALLS")
+                Text(l10n.str(.mcpCallsTitle))
                     .sectionTitleFont()
                     .foregroundColor(theme.textSecondary)
                 Spacer()
-                Text("\(formatWholeNumber(currentReport.metrics.mcpCalls)) · \(currentReport.metrics.servers) servers")
+                Text(String(format: l10n.str(.mcpHeaderFormat), formatWholeNumber(currentReport.metrics.mcpCalls), "\(currentReport.metrics.servers)"))
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(theme.textSecondary)
                     .monospacedDigit()
             }
             
             if currentReport.mcp.isEmpty {
-                compactEmptyState("No MCP calls in this period")
+                compactEmptyState(l10n.str(.emptyMcp))
             } else {
                 let servers = currentReport.mcp.prefix(5)
                 let maxCount = Double(servers.first?.count ?? 1)
@@ -680,7 +709,7 @@ struct StatusBarView: View {
                 }
 
                 if currentReport.mcp.count > 5 {
-                    Text("+\(currentReport.mcp.count - 5) more")
+                    Text(String(format: l10n.str(.moreFormat), currentReport.mcp.count - 5))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(theme.textTertiary)
                 }
@@ -691,18 +720,18 @@ struct StatusBarView: View {
     private var skillsSection: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                Text("SKILL CALLS")
+                Text(l10n.str(.skillCallsTitle))
                     .sectionTitleFont()
                     .foregroundColor(theme.textSecondary)
                 Spacer()
-                Text("\(formatWholeNumber(currentReport.metrics.skillCalls)) · \(currentReport.metrics.skills) skills")
+                Text(String(format: l10n.str(.skillHeaderFormat), formatWholeNumber(currentReport.metrics.skillCalls), "\(currentReport.metrics.skills)"))
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(theme.textSecondary)
                     .monospacedDigit()
             }
             
             if currentReport.skills.isEmpty {
-                compactEmptyState("No skill calls in this period")
+                compactEmptyState(l10n.str(.emptySkill))
             } else {
                 let skills = currentReport.skills.prefix(5)
                 let maxCount = Double(skills.first?.count ?? 1)
@@ -737,7 +766,7 @@ struct StatusBarView: View {
                 }
 
                 if currentReport.skills.count > 5 {
-                    Text("+\(currentReport.skills.count - 5) more")
+                    Text(String(format: l10n.str(.moreFormat), currentReport.skills.count - 5))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(theme.textTertiary)
                 }
@@ -747,13 +776,13 @@ struct StatusBarView: View {
     
     private var heatmapSection: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("DAILY ACTIVITY")
+            Text(l10n.str(.dailyActivity))
                 .sectionTitleFont()
                 .foregroundColor(theme.textSecondary)
 
             let heatmap = viewModel.monitoringData.dashboard.heatmap
             if heatmap.isEmpty {
-                compactEmptyState("No daily activity")
+                compactEmptyState(l10n.str(.emptyDaily))
             } else {
                 let weeks = heatmapWeeks(heatmap)
                 let gridWidth = heatmapGridWidth(weekCount: weeks.count)
@@ -781,7 +810,7 @@ struct StatusBarView: View {
 
                     HStack(spacing: 4) {
                         Spacer()
-                        Text("Less")
+                        Text(l10n.str(.legendLess))
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(theme.textTertiary)
                             .padding(.trailing, 2)
@@ -790,7 +819,7 @@ struct StatusBarView: View {
                                 .fill(colorForLevel(level))
                                 .frame(width: DashboardLayout.heatmapCell, height: DashboardLayout.heatmapCell)
                         }
-                        Text("More")
+                        Text(l10n.str(.legendMore))
                             .font(.system(size: 9, weight: .medium))
                             .foregroundColor(theme.textTertiary)
                             .padding(.leading, 2)
@@ -817,7 +846,7 @@ struct StatusBarView: View {
             }
             .buttonStyle(.borderless)
             .foregroundColor(theme.textSecondary)
-            .help("Settings")
+            .help(l10n.str(.settingsHelp))
             Button(l10n.str(.resetButton)) { viewModel.resetStats() }
                 .font(.system(size: 11.5, weight: .semibold))
                 .buttonStyle(.borderless)
@@ -869,7 +898,7 @@ struct StatusBarView: View {
     
     private func formatLargeNumber(_ count: Int) -> (value: String, suffix: String) {
         if count == 0 {
-            return ("0.00", "M")
+            return ("0", "")
         }
         if count >= 1_000_000 {
             return (String(format: "%.2f", Double(count) / 1_000_000), "M")
@@ -986,7 +1015,8 @@ private struct PeriodButton: View {
             Text(title)
                 .font(.system(size: 11.5, weight: isSelected ? .bold : .semibold))
                 .foregroundColor(isSelected ? theme.segOnText : theme.segOffText)
-                .frame(width: 42, height: 22)
+                .padding(.horizontal, 8)
+                .frame(minWidth: 42, minHeight: 22)
                 .background(isSelected ? theme.segOnBg : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .shadow(color: isSelected ? Color.black.opacity(colorScheme == .dark ? 0.18 : 0.10) : Color.clear, radius: 1, y: 1)
@@ -1003,7 +1033,8 @@ private struct TrendCard: View {
     let subtitle: String
     let points: [Double]
     let color: Color
-    
+    let valueColor: Color?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -1013,7 +1044,7 @@ private struct TrendCard: View {
                         .foregroundColor(theme.textSecondary)
                     Text(value)
                         .font(.system(size: 19, weight: .heavy, design: .rounded))
-                        .foregroundColor(title == "COST TREND" ? theme.primaryGreen : theme.textMain)
+                        .foregroundColor(valueColor ?? theme.textMain)
                         .monospacedDigit()
                     Text(subtitle)
                         .font(.system(size: 10.5, weight: .medium, design: .monospaced))

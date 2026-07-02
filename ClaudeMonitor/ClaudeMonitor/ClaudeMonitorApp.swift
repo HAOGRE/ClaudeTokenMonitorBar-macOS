@@ -42,10 +42,17 @@ private struct MenuBarLabel: View {
 
     var body: some View {
         let rate = viewModel.tokenRate
-        let rate1 = MonitoringViewModel.formatRate(rate.inputPerSec)
-        let rate2 = MonitoringViewModel.formatRate(rate.outputPerSec)
-        Image(nsImage: makeMenuBarImage(rate1: rate1, rate2: rate2))
-            .accessibilityLabel("↑\(rate1.value) \(rate1.unit) ↓\(rate2.value) \(rate2.unit)")
+        if rate.hasActivity {
+            let rate1 = MonitoringViewModel.formatRate(rate.inputPerSec)
+            let rate2 = MonitoringViewModel.formatRate(rate.outputPerSec)
+            Image(nsImage: makeMenuBarImage(rate1: rate1, rate2: rate2))
+                .accessibilityLabel("↑\(rate1.value) \(rate1.unit) ↓\(rate2.value) \(rate2.unit)")
+        } else {
+            // 空闲时显示今日成本，避免长期挂着 0 T/s
+            let cost = MonitoringViewModel.formatCost(viewModel.monitoringData.dashboard.day.metrics.cost)
+            Image(nsImage: makeCostImage(cost: cost))
+                .accessibilityLabel(cost)
+        }
     }
 }
 

@@ -9,6 +9,7 @@ struct Metrics {
     var totalTokens: Int = 0
     var inputTokens: Int = 0
     var outputTokens: Int = 0
+    var cacheTokens: Int = 0
     var cost: Double = 0
     var mcpCalls: Int = 0
     var skillCalls: Int = 0
@@ -76,7 +77,6 @@ struct MonitoringData {
     var dashboard: Dashboard = .empty
     var lastUpdated: Date = Date()
     var v4State: V4StateProtocol? = nil
-    var recentEntries: [UsageEntry] = []
     var isV4StateEstimated: Bool = false  // true = 本地估算，false = 官方数据
 
     static var empty: MonitoringData { MonitoringData() }
@@ -115,7 +115,7 @@ final class MonitoringViewModel {
     private let logger = Logger(subsystem: "com.haogre.claudetokenmonitor", category: "viewmodel")
     private let tokenReader = TokenDataReader()
     private let stateReader = StateProtocolReader()
-    nonisolated(unsafe) private var autoRefreshTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var autoRefreshTask: Task<Void, Never>?
 
     private var resetDate: Date? {
         get { UserDefaults.standard.object(forKey: "statsResetDate") as? Date }
@@ -133,6 +133,10 @@ final class MonitoringViewModel {
 
     init() {
         startAutoRefresh()
+    }
+
+    deinit {
+        autoRefreshTask?.cancel()
     }
 
     func refreshData() {
@@ -292,7 +296,6 @@ final class MonitoringViewModel {
         updated.lastUpdated = now
         updated.v4State = effectiveV4State
         updated.isV4StateEstimated = isEstimated
-        updated.recentEntries = Array(result.allEntries.suffix(5))
 
         monitoringData = updated
     }
@@ -343,6 +346,7 @@ final class MonitoringViewModel {
         metrics.totalTokens = totalTokens(in: entries)
         metrics.inputTokens = entries.reduce(0) { $0 + $1.inputTokens }
         metrics.outputTokens = entries.reduce(0) { $0 + $1.outputTokens }
+        metrics.cacheTokens = entries.reduce(0) { $0 + $1.cacheReadTokens + $1.cacheCreationTokens }
         metrics.cost = entries.reduce(0) { $0 + $1.costUsd }
         metrics.mcpCalls = entries.reduce(0) { $0 + $1.mcpServers.count }
         metrics.skillCalls = entries.reduce(0) { $0 + $1.skills.count }
@@ -444,7 +448,8 @@ final class MonitoringViewModel {
     }
 
     private func pctDelta(current: Double, previous: Double) -> Double {
-        guard previous > 0 else { return 0 }
+        // 上期为 0 但本期有用量时按 +100% 处理（语义"新增"），避免误显示 0%
+        guard previous > 0 else { return current > 0 ? 100 : 0 }
         return ((current - previous) / previous * 10_000).rounded() / 100
     }
 

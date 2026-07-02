@@ -13,15 +13,30 @@ enum LocalizedKey {
     case refreshIntervalTitle, refreshIntervalSubtitle
     case topProjectsTitle, topProjectsSubtitle
     case recentRecordsTitle, recentRecordsSubtitle
-    // StatusBarView
-    case appTitle, pickerAll, pickerToday
-    case todayCost, totalCost
-    case inputTokens, outputTokens, cacheRead
-    case projectSectionTitle, noProjectData
-    case recentSectionTitle, noRecentData
-    case chartSectionTitle, resetButton, quitButton
-    case rateInputLabel, rateOutputLabel
-    case noChartData, axisDate, axisCost
+    // StatusBarView - 头部与周期切换
+    case periodDay, periodWeek, periodMonth
+    case copySnapshotHelp, settingsHelp
+    // StatusBarView - Hero 区
+    case totalTokensTitle, estCost
+    case inputLabel, outputLabel, cacheLabel
+    // StatusBarView - 分区标题
+    case tokensByModel, costByModel
+    case requestsTitle, costTrendTitle
+    case mcpCallsTitle, skillCallsTitle
+    case dailyActivity
+    // StatusBarView - 格式化文案（String(format:) 占位）
+    case sessionsFormat        // "%@ sessions"
+    case mcpHeaderFormat       // "%@ · %@ servers"
+    case skillHeaderFormat     // "%@ · %@ skills"
+    case moreFormat            // "+%d more"
+    // StatusBarView - 空状态
+    case emptyUsage, emptyModelCost, emptyMcp, emptySkill, emptyDaily
+    // StatusBarView - 趋势副标题
+    case trendToday, trendThisWeek, trendThisMonth
+    // StatusBarView - 热力图图例
+    case legendLess, legendMore
+    // 底栏
+    case resetButton, quitButton
     // ViewModel
     case noDataError
     // v4 Rate Limits
@@ -35,7 +50,7 @@ final class L10n {
     private init() {}
 
     var language: AppLanguage {
-        let systemLang = Locale.current.languageCode ?? "zh"
+        let systemLang = Locale.current.language.languageCode?.identifier ?? "zh"
         return systemLang.hasPrefix("zh") ? .chinese : .english
     }
 
@@ -45,18 +60,6 @@ final class L10n {
 
     func refreshSec(_ sec: Int) -> String {
         language == .chinese ? "\(sec) 秒" : "\(sec) sec"
-    }
-
-    var axisDate: String { str(.axisDate) }
-    var axisCost: String { str(.axisCost) }
-
-    /// App 标题：GitHub 版固定用品牌名，App Store 版用本地化名称
-    var appTitle: String {
-        #if GITHUB_BUILD
-        return "Claude Token Monitor"
-        #else
-        return str(.appTitle)
-        #endif
     }
 
     private let strings: [AppLanguage: [LocalizedKey: String]] = [
@@ -74,26 +77,39 @@ final class L10n {
             .topProjectsSubtitle:    "显示已安装 MCP 服务的调用统计",
             .recentRecordsTitle:     "Skill 调用",
             .recentRecordsSubtitle:  "显示已安装 Skill 的调用统计",
-            .appTitle:               "AI Token 实时监控",
-            .pickerAll:              "全部",
-            .pickerToday:            "今天",
-            .todayCost:              "今日成本",
-            .totalCost:              "总成本",
-            .inputTokens:            "输入 Tokens",
-            .outputTokens:           "输出 Tokens",
-            .cacheRead:              "缓存读取",
-            .projectSectionTitle:    "项目成本 TOP 5",
-            .noProjectData:          "暂无项目数据",
-            .recentSectionTitle:     "最近记录",
-            .noRecentData:           "暂无记录",
-            .chartSectionTitle:      "30天趋势",
+            .periodDay:              "日",
+            .periodWeek:             "周",
+            .periodMonth:            "月",
+            .copySnapshotHelp:       "复制面板截图",
+            .settingsHelp:           "设置",
+            .totalTokensTitle:       "总 TOKENS",
+            .estCost:                "预估成本",
+            .inputLabel:             "输入",
+            .outputLabel:            "输出",
+            .cacheLabel:             "缓存",
+            .tokensByModel:          "按模型 TOKENS",
+            .costByModel:            "按模型成本",
+            .requestsTitle:          "请求数",
+            .costTrendTitle:         "成本趋势",
+            .mcpCallsTitle:          "MCP 调用",
+            .skillCallsTitle:        "SKILL 调用",
+            .dailyActivity:          "每日活跃",
+            .sessionsFormat:         "%@ 个会话",
+            .mcpHeaderFormat:        "%@ · %@ 个服务",
+            .skillHeaderFormat:      "%@ · %@ 个技能",
+            .moreFormat:             "还有 %d 个",
+            .emptyUsage:             "本期无用量",
+            .emptyModelCost:         "本期无模型成本",
+            .emptyMcp:               "本期无 MCP 调用",
+            .emptySkill:             "本期无 Skill 调用",
+            .emptyDaily:             "暂无每日活跃数据",
+            .trendToday:             "今天",
+            .trendThisWeek:          "本周",
+            .trendThisMonth:         "本月",
+            .legendLess:             "少",
+            .legendMore:             "多",
             .resetButton:            "重置",
             .quitButton:             "退出",
-            .rateInputLabel:         "输入",
-            .rateOutputLabel:        "输出",
-            .noChartData:            "暂无历史数据",
-            .axisDate:               "日期",
-            .axisCost:               "成本",
             .noDataError:            "未找到数据，请检查本地用量数据目录访问权限",
             .v4SectionTitle:         "官方速率限制 (v4)",
             .v4SectionTitleEstimated:"速率限制 (本地估算)",
@@ -119,26 +135,39 @@ final class L10n {
             .topProjectsSubtitle:    "Show call stats for installed MCP servers",
             .recentRecordsTitle:     "Skill Calls",
             .recentRecordsSubtitle:  "Show call stats for installed Skills",
-            .appTitle:               "AI Token Monitor",
-            .pickerAll:              "All",
-            .pickerToday:            "Today",
-            .todayCost:              "Today's Cost",
-            .totalCost:              "Total Cost",
-            .inputTokens:            "Input Tokens",
-            .outputTokens:           "Output Tokens",
-            .cacheRead:              "Cache Read",
-            .projectSectionTitle:    "Top 5 Projects",
-            .noProjectData:          "No project data",
-            .recentSectionTitle:     "Recent Records",
-            .noRecentData:           "No records",
-            .chartSectionTitle:      "30-Day Trend",
+            .periodDay:              "Day",
+            .periodWeek:             "Week",
+            .periodMonth:            "Month",
+            .copySnapshotHelp:       "Copy panel snapshot",
+            .settingsHelp:           "Settings",
+            .totalTokensTitle:       "TOTAL TOKENS",
+            .estCost:                "Est. cost",
+            .inputLabel:             "Input",
+            .outputLabel:            "Output",
+            .cacheLabel:             "Cache",
+            .tokensByModel:          "TOKENS BY MODEL",
+            .costByModel:            "COST BY MODEL",
+            .requestsTitle:          "REQUESTS",
+            .costTrendTitle:         "COST TREND",
+            .mcpCallsTitle:          "MCP CALLS",
+            .skillCallsTitle:        "SKILL CALLS",
+            .dailyActivity:          "DAILY ACTIVITY",
+            .sessionsFormat:         "%@ sessions",
+            .mcpHeaderFormat:        "%@ · %@ servers",
+            .skillHeaderFormat:      "%@ · %@ skills",
+            .moreFormat:             "+%d more",
+            .emptyUsage:             "No usage in this period",
+            .emptyModelCost:         "No model costs in this period",
+            .emptyMcp:               "No MCP calls in this period",
+            .emptySkill:             "No skill calls in this period",
+            .emptyDaily:             "No daily activity",
+            .trendToday:             "today",
+            .trendThisWeek:          "this week",
+            .trendThisMonth:         "this month",
+            .legendLess:             "Less",
+            .legendMore:             "More",
             .resetButton:            "Reset",
             .quitButton:             "Quit",
-            .rateInputLabel:         "In",
-            .rateOutputLabel:        "Out",
-            .noChartData:            "No historical data",
-            .axisDate:               "Date",
-            .axisCost:               "Cost",
             .noDataError:            "No data found. Please check local usage data folder access",
             .v4SectionTitle:         "Official Rate Limits (v4)",
             .v4SectionTitleEstimated:"Rate Limits (Estimated)",

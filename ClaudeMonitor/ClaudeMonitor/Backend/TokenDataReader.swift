@@ -20,33 +20,6 @@ struct UsageEntry: Identifiable, Sendable {
     let skills: [String]
 }
 
-/// token 使用统计数据
-struct UsageStatistics {
-    let totalInputTokens: Int
-    let totalOutputTokens: Int
-    let totalCacheReadTokens: Int
-    let totalCacheCreationTokens: Int
-    let totalCost: Double
-    let modelDistribution: [String: Int]
-    let entries: [UsageEntry]
-
-    init(entries: [UsageEntry]) {
-        self.entries = entries
-        self.totalInputTokens = entries.reduce(0) { $0 + $1.inputTokens }
-        self.totalOutputTokens = entries.reduce(0) { $0 + $1.outputTokens }
-        self.totalCacheReadTokens = entries.reduce(0) { $0 + $1.cacheReadTokens }
-        self.totalCacheCreationTokens = entries.reduce(0) { $0 + $1.cacheCreationTokens }
-        self.totalCost = entries.reduce(0) { $0 + $1.costUsd }
-
-        var modelDist: [String: Int] = [:]
-        for entry in entries {
-            let model = entry.model.isEmpty ? "unknown" : entry.model
-            modelDist[model, default: 0] += 1
-        }
-        self.modelDistribution = modelDist
-    }
-}
-
 // MARK: - 定价模型（与 Python pricing.py 对应）
 
 /// 获取模型的定价（每百万 token 的美元价格）
@@ -57,50 +30,40 @@ private struct ModelPricing {
     let cacheCreation: Double
     let cacheRead: Double
 
-    /// 定价配置表（按匹配优先级排序，越靠前越优先）
-    /// 格式：(关键字, 是否前缀匹配, 定价)
+    /// 定价配置表（按匹配优先级排序，越靠前越优先；更具体的型号必须放在通用名之前，
+    /// 如 opus-4-8 在 opus 之前，否则会被通用规则先命中）
     /// 设计为可扩展：添加新模型只需在此数组中添加一行
-    private static let pricingConfigs: [(keyword: String, isPrefix: Bool, pricing: ModelPricing)] = [
+    private static let pricingConfigs: [(keyword: String, pricing: ModelPricing)] = [
         // Mythos 系列（Project Glasswing 限定）
-        ("mythos", false, ModelPricing(input: 10.0, output: 50.0, cacheCreation: 12.50, cacheRead: 1.0)),
+        ("mythos", ModelPricing(input: 10.0, output: 50.0, cacheCreation: 12.50, cacheRead: 1.0)),
 
         // Fable 5
-        ("fable", false, ModelPricing(input: 10.0, output: 50.0, cacheCreation: 12.50, cacheRead: 1.0)),
+        ("fable", ModelPricing(input: 10.0, output: 50.0, cacheCreation: 12.50, cacheRead: 1.0)),
 
         // Opus 4.5/4.6/4.7/4.8（新版定价）
-        ("opus-4-5", true, ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
-        ("opus-4-6", true, ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
-        ("opus-4-7", true, ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
-        ("opus-4-8", true, ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
+        ("opus-4-5", ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
+        ("opus-4-6", ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
+        ("opus-4-7", ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
+        ("opus-4-8", ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
         // Opus 4/4.1（旧版，已 deprecated）
-        ("opus", false, ModelPricing(input: 15.0, output: 75.0, cacheCreation: 18.75, cacheRead: 1.5)),
+        ("opus", ModelPricing(input: 15.0, output: 75.0, cacheCreation: 18.75, cacheRead: 1.5)),
 
         // Haiku 4.5
-        ("haiku-4-5", true, ModelPricing(input: 1.0, output: 5.0, cacheCreation: 1.25, cacheRead: 0.1)),
+        ("haiku-4-5", ModelPricing(input: 1.0, output: 5.0, cacheCreation: 1.25, cacheRead: 0.1)),
         // Haiku 3.5（旧版）
-        ("haiku", false, ModelPricing(input: 0.8, output: 4.0, cacheCreation: 1.0, cacheRead: 0.08)),
+        ("haiku", ModelPricing(input: 0.8, output: 4.0, cacheCreation: 1.0, cacheRead: 0.08)),
 
         // Sonnet 4.x（默认兜底）
-        ("sonnet", false, ModelPricing(input: 3.0, output: 15.0, cacheCreation: 3.75, cacheRead: 0.3)),
+        ("sonnet", ModelPricing(input: 3.0, output: 15.0, cacheCreation: 3.75, cacheRead: 0.3)),
     ]
 
-    /// 根据模型名称获取定价
+    /// 根据模型名称获取定价（按 pricingConfigs 顺序做包含匹配）
     /// 新增模型支持：在 pricingConfigs 数组中添加配置即可
     static func forModel(_ model: String) -> ModelPricing {
         let lower = model.lowercased()
 
-        for config in pricingConfigs {
-            if config.isPrefix {
-                // 前缀匹配（用于版本号区分，如 opus-4-8 优先于 opus）
-                if lower.contains(config.keyword) {
-                    return config.pricing
-                }
-            } else {
-                // 包含匹配（通用名称匹配）
-                if lower.contains(config.keyword) {
-                    return config.pricing
-                }
-            }
+        for config in pricingConfigs where lower.contains(config.keyword) {
+            return config.pricing
         }
 
         // 默认使用 Sonnet 定价（最保守估计）
@@ -161,6 +124,15 @@ class TokenDataReader {
     }
     private var fileCache: [String: FileCache] = [:]
 
+    // 工具配置缓存：~/.claude.json 可达数 MB，避免每次刷新都全量解析
+    // key = (.claude.json mtime, .claude/skills mtime)，任一变化则重新加载
+    private struct ToolConfigCache {
+        var claudeJsonMtime: Date?
+        var skillsDirMtime: Date?
+        var config: UserToolConfig
+    }
+    private var toolConfigCache: ToolConfigCache?
+
     private struct UserToolConfig {
         let mcpServers: Set<String>
         let skills: Set<String>
@@ -213,12 +185,26 @@ class TokenDataReader {
     private func loadUserToolConfig() -> UserToolConfig {
         let home = realHomeDirectory()
         let fileManager = FileManager.default
+        let claudeConfigPath = (home as NSString).appendingPathComponent(".claude.json")
+        let skillsPath = (home as NSString).appendingPathComponent(".claude/skills")
+
+        func mtime(_ path: String) -> Date? {
+            (try? fileManager.attributesOfItem(atPath: path))?[.modificationDate] as? Date
+        }
+
+        let claudeJsonMtime = mtime(claudeConfigPath)
+        let skillsDirMtime = mtime(skillsPath)
+        if let cached = toolConfigCache,
+           cached.claudeJsonMtime == claudeJsonMtime,
+           cached.skillsDirMtime == skillsDirMtime {
+            return cached.config
+        }
+
         var mcpServers = Set<String>()
         var skills = Set<String>()
         var hasMcpWhitelist = false
         var hasSkillWhitelist = false
 
-        let claudeConfigPath = (home as NSString).appendingPathComponent(".claude.json")
         if let data = try? Data(contentsOf: URL(fileURLWithPath: claudeConfigPath)),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             hasMcpWhitelist = true
@@ -231,7 +217,6 @@ class TokenDataReader {
             }
         }
 
-        let skillsPath = (home as NSString).appendingPathComponent(".claude/skills")
         if let names = try? fileManager.contentsOfDirectory(atPath: skillsPath) {
             hasSkillWhitelist = true
             for name in names {
@@ -243,12 +228,18 @@ class TokenDataReader {
             }
         }
 
-        return UserToolConfig(
+        let config = UserToolConfig(
             mcpServers: mcpServers,
             skills: skills,
             hasMcpWhitelist: hasMcpWhitelist,
             hasSkillWhitelist: hasSkillWhitelist
         )
+        toolConfigCache = ToolConfigCache(
+            claudeJsonMtime: claudeJsonMtime,
+            skillsDirMtime: skillsDirMtime,
+            config: config
+        )
+        return config
     }
 
     private func collectMcpServers(from value: Any?, into servers: inout Set<String>) {
@@ -273,60 +264,6 @@ class TokenDataReader {
     }
 
     // MARK: - 公共接口
-
-    /// 加载使用数据条目
-    /// - Parameters:
-    ///   - dataPath: 数据目录路径，nil 表示使用默认 ~/.claude/projects（自动解析真实 Home）
-    ///   - hoursBack: 往回查询的小时数，nil 表示查询所有数据
-    ///   - since: 硬性起始时间（用于重置功能），与 hoursBack 取较晚值
-    func loadUsageEntries(dataPath: String? = nil, hoursBack: Int? = nil, since: Date? = nil) -> [UsageEntry] {
-        let expandedPath: String
-        if let path = dataPath {
-            // 显式传入路径时，先尝试 ~ 展开，再使用真实 Home
-            if path.hasPrefix("~/") {
-                expandedPath = realHomeDirectory() + path.dropFirst(1)
-            } else {
-                expandedPath = path
-            }
-        } else {
-            expandedPath = claudeDataPath()
-        }
-
-        let fileManager = FileManager.default
-        let toolConfig = loadUserToolConfig()
-
-        guard fileManager.fileExists(atPath: expandedPath) else {
-            logger.warning("数据目录不存在: \(expandedPath)")
-            return []
-        }
-
-        let hoursBackDate: Date? = hoursBack.map { Date().addingTimeInterval(-Double($0) * 3600) }
-        let cutoffDate: Date? = [hoursBackDate, since].compactMap { $0 }.max()
-
-        // 递归查找所有 .jsonl 文件
-        let jsonlFiles = findJsonlFiles(in: expandedPath, fileManager: fileManager)
-        guard !jsonlFiles.isEmpty else {
-            logger.info("未找到 .jsonl 文件，目录: \(expandedPath)")
-            return []
-        }
-
-        var seenHashes = Set<String>()
-        var allEntries: [UsageEntry] = []
-
-        for filePath in jsonlFiles {
-            let entries = parseFile(at: filePath, cutoffDate: cutoffDate, seenHashes: &seenHashes, config: toolConfig)
-            allEntries.append(contentsOf: entries)
-        }
-
-        let sorted = allEntries.sorted { $0.timestamp < $1.timestamp }
-        logger.info("已加载 \(sorted.count) 条记录（来自 \(jsonlFiles.count) 个文件）")
-        return sorted
-    }
-
-    /// 获取聚合统计信息
-    func getStatistics(hoursBack: Int? = nil, since: Date? = nil) -> UsageStatistics {
-        UsageStatistics(entries: loadUsageEntries(hoursBack: hoursBack, since: since))
-    }
 
     /// 一次文件扫描产出所有聚合所需的原始分组，供 MonitoringViewModel 使用
     struct AllData: Sendable {
@@ -416,6 +353,10 @@ class TokenDataReader {
             }
         }
 
+        // 清理已删除 jsonl 文件的缓存，避免 fileCache 无上限增长
+        let currentFiles = Set(jsonlFiles)
+        fileCache = fileCache.filter { currentFiles.contains($0.key) }
+
         allEntries.sort { $0.timestamp < $1.timestamp }
         logger.info("loadAllData: \(allEntries.count) 条记录（来自 \(jsonlFiles.count) 个文件）")
         return AllData(
@@ -426,74 +367,6 @@ class TokenDataReader {
             installedMcpServers: installedMcpCount(from: allEntries, config: toolConfig),
             installedSkills: installedSkillCount(from: allEntries, config: toolConfig)
         )
-    }
-
-    /// 按小时分组统计
-    func getHourlyData(hoursBack: Int = 24) -> [Date: UsageStatistics] {
-        let entries = loadUsageEntries(hoursBack: hoursBack)
-        let calendar = Calendar.current
-        var grouped: [Date: [UsageEntry]] = [:]
-
-        for entry in entries {
-            let comps = calendar.dateComponents([.year, .month, .day, .hour], from: entry.timestamp)
-            guard let hourDate = calendar.date(from: comps) else { continue }
-            grouped[hourDate, default: []].append(entry)
-        }
-
-        return grouped.mapValues { UsageStatistics(entries: $0) }
-    }
-
-    /// 按天分组统计（最近 N 天）
-    func getDailyData(daysBack: Int = 30, since: Date? = nil) -> [Date: UsageStatistics] {
-        let calendar = Calendar.current
-        // 以 daysBack 天前当天凌晨为起始，避免跨天边界问题
-        let startOfToday = calendar.startOfDay(for: Date())
-        let startDate = calendar.date(byAdding: .day, value: -daysBack, to: startOfToday) ?? Date().addingTimeInterval(-Double(daysBack) * 86400)
-        let effectiveSince = [startDate, since].compactMap { $0 }.max()
-
-        let entries = loadUsageEntries(since: effectiveSince)
-        var grouped: [Date: [UsageEntry]] = [:]
-
-        for entry in entries {
-            let comps = calendar.dateComponents([.year, .month, .day], from: entry.timestamp)
-            guard let dayDate = calendar.date(from: comps) else { continue }
-            grouped[dayDate, default: []].append(entry)
-        }
-
-        return grouped.mapValues { UsageStatistics(entries: $0) }
-    }
-
-    /// 按项目（文件所在目录名）分组统计
-    func getProjectData(dataPath: String? = nil) -> [String: UsageStatistics] {
-        let expandedPath: String
-        if let path = dataPath {
-            if path.hasPrefix("~/") {
-                expandedPath = realHomeDirectory() + path.dropFirst(1)
-            } else {
-                expandedPath = path
-            }
-        } else {
-            expandedPath = claudeDataPath()
-        }
-
-        let fileManager = FileManager.default
-        let jsonlFiles = findJsonlFiles(in: expandedPath, fileManager: fileManager)
-        let toolConfig = loadUserToolConfig()
-        var seenHashes = Set<String>()
-        var projectEntries: [String: [UsageEntry]] = [:]
-
-        for filePath in jsonlFiles {
-            // 取文件所在目录名作为项目名
-            let dirPath = (filePath as NSString).deletingLastPathComponent
-            let projectName = (dirPath as NSString).lastPathComponent
-
-            let entries = parseFile(at: filePath, cutoffDate: nil, seenHashes: &seenHashes, config: toolConfig)
-            if !entries.isEmpty {
-                projectEntries[projectName, default: []].append(contentsOf: entries)
-            }
-        }
-
-        return projectEntries.mapValues { UsageStatistics(entries: $0) }
     }
 
     // MARK: - 私有方法
@@ -611,13 +484,6 @@ class TokenDataReader {
             fileCache[filePath] = FileCache(mtime: mtime, configSignature: config.signature, entries: entries)
         }
         return entries
-    }
-
-    /// 解析单个 JSONL 文件（带时间过滤，供旧接口 loadUsageEntries 使用）
-    private func parseFile(at filePath: String, cutoffDate: Date?, seenHashes: inout Set<String>, config: UserToolConfig) -> [UsageEntry] {
-        let all = rawEntriesForFile(at: filePath, seenHashes: &seenHashes, config: config)
-        guard let cutoff = cutoffDate else { return all }
-        return all.filter { $0.timestamp >= cutoff }
     }
 
     // MARK: - 字段提取辅助

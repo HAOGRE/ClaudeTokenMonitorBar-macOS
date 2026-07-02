@@ -10,11 +10,20 @@ final class BookmarkManager {
     static let shared = BookmarkManager()
     private init() {}
 
+    // 缓存已解析并 startAccessing 成功的 URL：
+    // startAccessingSecurityScopedResource 每次调用都会占用一个内核引用且此处从不 stop，
+    // 若每次刷新都重新解析会泄漏引用，数小时后耗尽导致读不到数据
+    private var activeURL: URL?
+
     // MARK: - Public API
 
     /// Returns the resolved ~/.claude/projects path if bookmark access is available, otherwise nil.
     func resolvedPath() -> String? {
+        if let url = activeURL {
+            return url.path
+        }
         if let url = resolveBookmark() {
+            activeURL = url
             return url.path
         }
         return nil
@@ -56,6 +65,7 @@ final class BookmarkManager {
             return false
         }
 
+        activeURL = nil // 用户重新授权后，下次 resolvedPath 重新解析新 bookmark
         return storeBookmark(for: url)
     }
 
