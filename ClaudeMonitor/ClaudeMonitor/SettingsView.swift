@@ -68,6 +68,16 @@ struct SettingsView: View {
                     )
                 )
 
+                PeriodModeRow(
+                    useCalendarPeriods: Binding(
+                        get: { settings.useCalendarPeriods },
+                        set: { newValue in
+                            settings.useCalendarPeriods = newValue
+                            viewModel.refreshData()
+                        }
+                    )
+                )
+
                 Divider()
 
 
@@ -165,6 +175,43 @@ private struct RefreshIntervalRow: View {
             .pickerStyle(.menu)
             .labelsHidden()
             .frame(width: 72)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+// MARK: - 周/月统计口径选择行
+
+private struct PeriodModeRow: View {
+    @Binding var useCalendarPeriods: Bool
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: Theme { Theme(isDark: colorScheme == .dark) }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "calendar.circle.fill")
+                .foregroundColor(theme.primaryGreen)
+                .imageScale(.medium)
+                .frame(width: 22)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(L10n.shared.str(.periodModeTitle))
+                    .font(.callout)
+                    .foregroundColor(theme.textMain)
+                Text(L10n.shared.str(.periodModeSubtitle))
+                    .font(.caption2)
+                    .foregroundColor(theme.textSecondary)
+            }
+
+            Spacer()
+
+            Picker("", selection: $useCalendarPeriods) {
+                Text(L10n.shared.str(.periodModeRolling)).tag(false)
+                Text(L10n.shared.str(.periodModeCalendar)).tag(true)
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .fixedSize()
         }
         .padding(.vertical, 2)
     }

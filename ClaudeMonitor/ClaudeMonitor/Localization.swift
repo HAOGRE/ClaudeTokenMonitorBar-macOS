@@ -11,6 +11,8 @@ enum LocalizedKey {
     case launchAtLoginTitle, launchAtLoginSubtitle
     case showDockIconTitle, showDockIconSubtitle
     case refreshIntervalTitle, refreshIntervalSubtitle
+    case periodModeTitle, periodModeSubtitle
+    case periodModeRolling, periodModeCalendar
     case showModelsTitle, showModelsSubtitle
     case showTrendTitle, showTrendSubtitle
     case showMcpSkillTitle, showMcpSkillSubtitle
@@ -36,6 +38,7 @@ enum LocalizedKey {
     case emptyUsage, emptyMcp, emptySkill, emptyDaily
     // StatusBarView - 趋势副标题
     case trendToday, trendThisWeek, trendThisMonth
+    case trendLast7Days, trendLast30Days
     // StatusBarView - 热力图图例
     case legendLess, legendMore
     // ViewModel
@@ -75,6 +78,10 @@ final class L10n {
             .showDockIconSubtitle:   "在 Dock 栏显示应用图标",
             .refreshIntervalTitle:   "刷新间隔",
             .refreshIntervalSubtitle:"数据自动刷新的时间间隔",
+            .periodModeTitle:        "统计口径",
+            .periodModeSubtitle:     "周/月的统计范围",
+            .periodModeRolling:      "近 7/30 天",
+            .periodModeCalendar:     "自然周/月",
             .showModelsTitle:        "模型统计",
             .showModelsSubtitle:     "按模型的 Tokens 与成本环形图",
             .showTrendTitle:         "趋势卡片",
@@ -114,6 +121,8 @@ final class L10n {
             .trendToday:             "今天",
             .trendThisWeek:          "本周",
             .trendThisMonth:         "本月",
+            .trendLast7Days:         "近 7 天",
+            .trendLast30Days:        "近 30 天",
             .legendLess:             "少",
             .legendMore:             "多",
             .noDataError:            "未找到数据，请检查本地用量数据目录访问权限",
@@ -138,6 +147,10 @@ final class L10n {
             .showDockIconSubtitle:   "Display app icon in the Dock",
             .refreshIntervalTitle:   "Refresh Interval",
             .refreshIntervalSubtitle:"Interval for automatic data refresh",
+            .periodModeTitle:        "Period Mode",
+            .periodModeSubtitle:     "Range for Week/Month stats",
+            .periodModeRolling:      "Last 7/30 days",
+            .periodModeCalendar:     "Calendar week/month",
             .showModelsTitle:        "Model Breakdown",
             .showModelsSubtitle:     "Tokens & cost donuts by model",
             .showTrendTitle:         "Trend Cards",
@@ -177,6 +190,8 @@ final class L10n {
             .trendToday:             "today",
             .trendThisWeek:          "this week",
             .trendThisMonth:         "this month",
+            .trendLast7Days:         "last 7 days",
+            .trendLast30Days:        "last 30 days",
             .legendLess:             "Less",
             .legendMore:             "More",
             .noDataError:            "No data found. Please check local usage data folder access",

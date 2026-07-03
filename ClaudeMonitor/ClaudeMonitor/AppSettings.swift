@@ -24,6 +24,11 @@ final class AppSettings {
     }
     static let refreshIntervalOptions = [3, 5, 10, 30, 60]
 
+    // MARK: - 周/月统计口径（false = 滚动窗口 近7/30天（默认），true = 自然周/自然月）
+    var useCalendarPeriods: Bool {
+        didSet { UserDefaults.standard.set(useCalendarPeriods, forKey: "useCalendarPeriods") }
+    }
+
 
 
     // MARK: - Dock 图标
@@ -53,6 +58,7 @@ final class AppSettings {
         showMcpSkillSection = defaults.object(forKey: "showMcpSkillSection") as? Bool ?? true
         showHeatmapSection  = defaults.object(forKey: "showHeatmapSection")  as? Bool ?? true
         refreshInterval     = defaults.object(forKey: "refreshInterval")     as? Int  ?? 5
+        useCalendarPeriods  = defaults.object(forKey: "useCalendarPeriods")  as? Bool ?? false
         showDockIcon        = defaults.object(forKey: "showDockIcon")        as? Bool ?? false
 
         // 从系统读取开机启动的实际状态（以系统为准，不存 UserDefaults）

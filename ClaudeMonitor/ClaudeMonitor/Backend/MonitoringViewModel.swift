@@ -321,6 +321,7 @@ final class MonitoringViewModel {
 
     private func periodRange(for period: Period, now: Date, calendar: Calendar) -> PeriodWindow {
         let startOfToday = calendar.startOfDay(for: now)
+        let useCalendar = AppSettings.shared.useCalendarPeriods
 
         switch period {
         case .day:
@@ -329,6 +330,7 @@ final class MonitoringViewModel {
             return (startOfToday, next, previous, startOfToday)
 
         case .week:
+            guard useCalendar else { return rollingWindow(days: 7, startOfToday: startOfToday, calendar: calendar) }
             let daysFromMonday = (calendar.component(.weekday, from: startOfToday) + 5) % 7
             let start = calendar.date(byAdding: .day, value: -daysFromMonday, to: startOfToday) ?? startOfToday
             let next = calendar.date(byAdding: .day, value: 7, to: start) ?? now
@@ -336,12 +338,21 @@ final class MonitoringViewModel {
             return (start, next, previous, start)
 
         case .month:
+            guard useCalendar else { return rollingWindow(days: 30, startOfToday: startOfToday, calendar: calendar) }
             let components = calendar.dateComponents([.year, .month], from: now)
             let start = calendar.date(from: components) ?? startOfToday
             let next = calendar.date(byAdding: .month, value: 1, to: start) ?? now
             let previous = calendar.date(byAdding: .month, value: -1, to: start) ?? now.addingTimeInterval(-86400 * 30)
             return (start, next, previous, start)
         }
+    }
+
+    /// 滚动窗口：近 N 天（含今天），previous 为再往前 N 天
+    private func rollingWindow(days: Int, startOfToday: Date, calendar: Calendar) -> PeriodWindow {
+        let end = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? startOfToday
+        let start = calendar.date(byAdding: .day, value: -(days - 1), to: startOfToday) ?? startOfToday
+        let previous = calendar.date(byAdding: .day, value: -days, to: start) ?? start
+        return (start, end, previous, start)
     }
 
     private func buildPeriodReport(
@@ -423,16 +434,27 @@ final class MonitoringViewModel {
             return (0..<7).map { index in
                 let date = calendar.date(byAdding: .day, value: index, to: start) ?? start
                 let components = calendar.dateComponents([.month, .day], from: date)
-                let full = "\(weekdays[index]) \(monthName(components.month ?? 1)) \(components.day ?? index + 1)"
-                return (weekdays[index], full, 0, 0, 0, 0, 0)
+                // 按每桶实际日期取星期名：自然周从周一起，滚动窗口以今天结尾
+                let weekday = weekdays[(calendar.component(.weekday, from: date) + 5) % 7]
+                let full = "\(weekday) \(monthName(components.month ?? 1)) \(components.day ?? index + 1)"
+                return (weekday, full, 0, 0, 0, 0, 0)
             }
 
         case .month:
             let days = max(1, calendar.dateComponents([.day], from: start, to: end).day ?? 30)
-            let month = calendar.component(.month, from: start)
+            let useCalendar = AppSettings.shared.useCalendarPeriods
             return (0..<days).map { index in
-                let day = index + 1
-                let label = index == 0 || day % 5 == 0 ? "\(day)" : ""
+                let date = calendar.date(byAdding: .day, value: index, to: start) ?? start
+                let components = calendar.dateComponents([.month, .day], from: date)
+                let month = components.month ?? 1
+                let day = components.day ?? index + 1
+                let label: String
+                if useCalendar {
+                    label = index == 0 || day % 5 == 0 ? "\(day)" : ""
+                } else {
+                    // 滚动窗口跨月，X 轴显示 月/日
+                    label = index % 5 == 0 ? "\(month)/\(day)" : ""
+                }
                 return (label, "\(monthName(month)) \(day)", 0, 0, 0, 0, 0)
             }
         }
@@ -442,11 +464,10 @@ final class MonitoringViewModel {
         switch period {
         case .day:
             return calendar.component(.hour, from: date)
-        case .week:
+        case .week, .month:
+            // 与窗口起点做天数偏移，自然月（起点为 1 号）与滚动窗口均成立
             let startOfDay = calendar.startOfDay(for: date)
             return calendar.dateComponents([.day], from: start, to: startOfDay).day
-        case .month:
-            return calendar.component(.day, from: date) - 1
         }
     }
 

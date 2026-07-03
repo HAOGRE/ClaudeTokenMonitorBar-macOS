@@ -158,10 +158,11 @@ struct StatusBarView: View {
     }
     
     private var trendSubtitle: String {
+        let useCalendar = settings.useCalendarPeriods
         switch selectedPeriod {
         case 0: return l10n.str(.trendToday)
-        case 1: return l10n.str(.trendThisWeek)
-        default: return l10n.str(.trendThisMonth)
+        case 1: return l10n.str(useCalendar ? .trendThisWeek : .trendLast7Days)
+        default: return l10n.str(useCalendar ? .trendThisMonth : .trendLast30Days)
         }
     }
     
