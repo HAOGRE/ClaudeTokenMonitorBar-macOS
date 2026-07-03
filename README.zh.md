@@ -3,7 +3,7 @@
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org/)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-blue.svg)](https://developer.apple.com/xcode/swiftui/)
-[![Version](https://img.shields.io/badge/version-1.2.1-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.3.0-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 一款原生 macOS 菜单栏伴侣应用，实时监控 **Claude Code** 的 Token 使用量和费用。完全使用 Swift/SwiftUI 构建，零外部依赖。
@@ -65,38 +65,17 @@ brew tap haogre/tap
 brew install --cask claude-token-monitor-bar
 ```
 
-> 提交到官方 homebrew/cask 仓库的 PR（[#273009](https://github.com/Homebrew/homebrew-cask/pull/273009)）暂时搁置——官方要求 Apple 公证及项目知名度（≥225 star）。欢迎点 star 支持 ⭐
+> 提交到官方 homebrew/cask 仓库的 PR（[#273009](https://github.com/Homebrew/homebrew-cask/pull/273009)）暂时搁置——官方要求项目知名度（≥225 star）。欢迎点 star 支持 ⭐
 
 然后从启动台或应用程序文件夹启动 **ClaudeTokenMonitorBar**。
 
-> **⚠️ 首次启动**
->
-> 由于应用未经苹果公证，macOS Gatekeeper 会显示安全警告：
->
-> ```
-> "ClaudeTokenMonitorBar" 未能打开
-> Apple 无法验证"ClaudeTokenMonitorBar"是否含有恶意软件...
-> [移到废纸篓] [完成]
-> ```
->
-> **处理方法：**
->
-> 1. 点击 **"完成"**（不要点"移到废纸篓"）
-> 2. 打开**系统设置 → 隐私与安全性**
-> 3. 向下滚动找到 **"已阻止使用 ClaudeTokenMonitorBar"**
-> 4. 点击 **"仍要打开"**
-> 5. 在确认对话框点击 **"打开"**
->
-> **备选方案：命令行方式**
-> ```bash
-> xattr -d com.apple.quarantine /Applications/ClaudeTokenMonitorBar.app
-> ```
+> ✅ 自 v1.3.0 起，应用已经过 **Apple 签名与公证**——首次启动不会再有 Gatekeeper 安全警告。（旧版本 ≤1.2.1 需在系统设置 → 隐私与安全性中放行，或执行 `xattr -d com.apple.quarantine /Applications/ClaudeTokenMonitorBar.app`）
 
 ### 方案 2：下载 DMG
 
 1. 前往 [Releases](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
-2. 下载 `ClaudeTokenMonitorBar-v1.2.1.dmg`
-3. 打开 DMG，将 `ClaudeTokenMonitor.app` 拖入**应用程序**
+2. 下载 `ClaudeTokenMonitorBar-v1.3.0.dmg`
+3. 打开 DMG，将 `ClaudeTokenMonitorBar.app` 拖入**应用程序**
 4. 启动 — 应用立即出现在菜单栏（默认无 Dock 图标）
 
 ### 方案 3：从源码构建

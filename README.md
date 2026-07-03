@@ -3,7 +3,7 @@
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org/)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-blue.svg)](https://developer.apple.com/xcode/swiftui/)
-[![Version](https://img.shields.io/badge/version-1.2.1-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.3.0-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A native macOS menu bar companion app that monitors your **Claude Code** token usage and costs in real-time. Built entirely in Swift/SwiftUI with zero external dependencies.
@@ -65,38 +65,17 @@ brew tap haogre/tap
 brew install --cask claude-token-monitor-bar
 ```
 
-> Submission to the official homebrew/cask repo ([#273009](https://github.com/Homebrew/homebrew-cask/pull/273009)) is on hold — it requires Apple notarization and higher project notability (≥225 stars). Starring this repo helps ⭐
+> Submission to the official homebrew/cask repo ([#273009](https://github.com/Homebrew/homebrew-cask/pull/273009)) is on hold — it requires higher project notability (≥225 stars). Starring this repo helps ⭐
 
 Then launch **ClaudeTokenMonitorBar** from Launchpad or Applications folder.
 
-> **⚠️ First Launch**
->
-> Since the app is not notarized, macOS Gatekeeper will show a security warning:
->
-> ```
-> "ClaudeTokenMonitorBar" Not Opened
-> Apple could not verify "ClaudeTokenMonitorBar" is free of malware...
-> [Move to Trash] [Done]
-> ```
->
-> **To proceed:**
->
-> 1. Click **"Done"** (NOT "Move to Trash")
-> 2. Open **System Settings → Privacy & Security**
-> 3. Scroll down to find **"ClaudeTokenMonitorBar"** was blocked
-> 4. Click **"Open Anyway"**
-> 5. Click **"Open"** on the confirmation dialog
->
-> **Alternative: Command Line**
-> ```bash
-> xattr -d com.apple.quarantine /Applications/ClaudeTokenMonitorBar.app
-> ```
+> ✅ Since v1.3.0 the app is **signed and notarized by Apple** — it opens without any Gatekeeper warning. (For older versions ≤1.2.1, allow the app in System Settings → Privacy & Security, or run `xattr -d com.apple.quarantine /Applications/ClaudeTokenMonitorBar.app`.)
 
 ### Option 2: Download DMG
 
 1. Go to [Releases](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
-2. Download `ClaudeTokenMonitorBar-v1.2.1.dmg`
-3. Open DMG, drag `ClaudeTokenMonitor.app` to **Applications**
+2. Download `ClaudeTokenMonitorBar-v1.3.0.dmg`
+3. Open DMG, drag `ClaudeTokenMonitorBar.app` to **Applications**
 4. Launch — the app appears in the menu bar immediately (no Dock icon by default)
 
 ### Option 3: Build from Source
