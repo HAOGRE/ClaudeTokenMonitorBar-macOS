@@ -20,8 +20,26 @@ A native macOS menu bar companion app that monitors your **Claude Code** token u
 
 ## Screenshot
 
+### Dark Mode
+
 <p align="center">
-  <img src="assets/screenshot.png" width="340" alt="Claude Token Monitor Screenshot" />
+  <img src="assets/screenshots/dark-day.png" width="32%" alt="Day View (Dark)" />
+  <img src="assets/screenshots/dark-week.png" width="32%" alt="Week View (Dark)" />
+  <img src="assets/screenshots/dark-month.png" width="32%" alt="Month View (Dark)" />
+</p>
+<p align="center">
+  <sub>Day</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <sub>Week</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <sub>Month</sub>
+</p>
+
+### Light Mode
+
+<p align="center">
+  <img src="assets/screenshots/light-day.png" width="32%" alt="Day View (Light)" />
+  <img src="assets/screenshots/light-week.png" width="32%" alt="Week View (Light)" />
+  <img src="assets/screenshots/light-month.png" width="32%" alt="Month View (Light)" />
+</p>
+<p align="center">
+  <sub>Day</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <sub>Week</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <sub>Month</sub>
 </p>
 
 ---
@@ -185,6 +203,15 @@ The app shows a hint message and displays data automatically once Claude Code cr
 
 **How accurate is the cost estimate?**
 When `cost_usd` is present in the JSONL entry, that exact value is used. Otherwise, pricing is calculated using the Anthropic official rate table above.
+
+**Why does the app ask for permissions?**
+
+| Permission | Why it's needed |
+|------------|-----------------|
+| **Folder Access** | To read your local Claude Code session files at `~/.claude/projects/` for token usage statistics. |
+| **Keychain Access** | To read the OAuth token stored by Claude Code ("Claude Code-credentials") for fetching official rate limits. The system will prompt for your password—this is expected behavior for accessing another app's Keychain item. |
+
+All data stays on your machine. No external uploads.
 
 **Why is there both a "Claude Token Monitor" and "AI Token Monitor" version?**
 `ClaudeTokenMonitorBar` (this repo) is the open-source GitHub distribution. The App Store version is also named `ClaudeTokenMonitorBar` with full sandbox compliance.
