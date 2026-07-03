@@ -62,6 +62,7 @@ Available now via the [haogre/tap](https://github.com/HAOGRE/homebrew-tap):
 
 ```bash
 brew tap haogre/tap
+brew trust haogre/tap   # one-time: newer Homebrew requires trusting third-party taps
 brew install --cask claude-token-monitor-bar
 ```
 

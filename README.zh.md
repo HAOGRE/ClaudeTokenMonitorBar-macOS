@@ -62,6 +62,7 @@
 
 ```bash
 brew tap haogre/tap
+brew trust haogre/tap   # 一次性：新版 Homebrew 要求信任第三方 tap
 brew install --cask claude-token-monitor-bar
 ```
 
