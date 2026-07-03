@@ -67,9 +67,9 @@ brew install --cask claude-token-monitor-bar
 
 Then launch **ClaudeTokenMonitorBar** from Launchpad or Applications folder.
 
-> **⚠️ First Launch / 首次启动**
+> **⚠️ First Launch**
 >
-> Since the app is not notarized, macOS Gatekeeper will show a security warning: / 由于该应用未经苹果公证，macOS Gatekeeper 会显示安全警告：
+> Since the app is not notarized, macOS Gatekeeper will show a security warning:
 >
 > ```
 > "ClaudeTokenMonitorBar" Not Opened
@@ -77,15 +77,15 @@ Then launch **ClaudeTokenMonitorBar** from Launchpad or Applications folder.
 > [Move to Trash] [Done]
 > ```
 >
-> **To proceed / 处理方法：**
+> **To proceed:**
 >
-> 1. Click **"Done"** (NOT "Move to Trash") / 点击 **"完成"**（不要点"移到废纸篓"）
-> 2. Open **System Settings → Privacy & Security** / 打开**系统设置 → 隐私与安全性**
-> 3. Scroll down to find **"ClaudeTokenMonitorBar"** was blocked / 向下滚动找到 **"已阻止使用 ClaudeTokenMonitorBar"**
-> 4. Click **"Open Anyway"** / 点击 **"仍要打开"**
-> 5. Click **"Open"** on the confirmation dialog / 在确认对话框点击 **"打开"**
+> 1. Click **"Done"** (NOT "Move to Trash")
+> 2. Open **System Settings → Privacy & Security**
+> 3. Scroll down to find **"ClaudeTokenMonitorBar"** was blocked
+> 4. Click **"Open Anyway"**
+> 5. Click **"Open"** on the confirmation dialog
 >
-> **Alternative: Command Line / 备选方案：命令行方式**
+> **Alternative: Command Line**
 > ```bash
 > xattr -d com.apple.quarantine /Applications/ClaudeTokenMonitorBar.app
 > ```
