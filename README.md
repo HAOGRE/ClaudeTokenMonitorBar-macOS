@@ -20,6 +20,12 @@ A native macOS menu bar companion app that monitors your **Claude Code** token u
 
 ## Screenshot
 
+### Status Bar
+
+| Active (Token Rates) | Idle (Accumulated Cost) |
+|:---:|:---:|
+| <img src="assets/screenshots/statusbar-rate.png" width="400" /> | <img src="assets/screenshots/statusbar-cost.png" width="400" /> |
+
 ### Dark Mode
 
 | Day | Week | Month |
