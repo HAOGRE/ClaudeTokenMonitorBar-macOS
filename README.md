@@ -22,25 +22,15 @@ A native macOS menu bar companion app that monitors your **Claude Code** token u
 
 ### Dark Mode
 
-<p align="center">
-  <img src="assets/screenshots/dark-day.png" width="32%" alt="Day View (Dark)" />
-  <img src="assets/screenshots/dark-week.png" width="32%" alt="Week View (Dark)" />
-  <img src="assets/screenshots/dark-month.png" width="32%" alt="Month View (Dark)" />
-</p>
-<p align="center">
-  <sub>Day</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <sub>Week</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <sub>Month</sub>
-</p>
+| Day | Week | Month |
+|:---:|:---:|:---:|
+| <img src="assets/screenshots/dark-day.png" width="220" /> | <img src="assets/screenshots/dark-week.png" width="220" /> | <img src="assets/screenshots/dark-month.png" width="220" /> |
 
 ### Light Mode
 
-<p align="center">
-  <img src="assets/screenshots/light-day.png" width="32%" alt="Day View (Light)" />
-  <img src="assets/screenshots/light-week.png" width="32%" alt="Week View (Light)" />
-  <img src="assets/screenshots/light-month.png" width="32%" alt="Month View (Light)" />
-</p>
-<p align="center">
-  <sub>Day</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <sub>Week</sub> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <sub>Month</sub>
-</p>
+| Day | Week | Month |
+|:---:|:---:|:---:|
+| <img src="assets/screenshots/light-day.png" width="220" /> | <img src="assets/screenshots/light-week.png" width="220" /> | <img src="assets/screenshots/light-month.png" width="220" /> |
 
 ---
 
