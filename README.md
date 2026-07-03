@@ -56,14 +56,16 @@ A native macOS menu bar companion app that monitors your **Claude Code** token u
 
 ## Install
 
-### Option 1: Homebrew (Recommended) ⏳
+### Option 1: Homebrew (Recommended) ✅
 
-> **Status**: [Pending Review](https://github.com/Homebrew/homebrew-cask/pull/272983) — not yet available
+Available now via the [haogre/tap](https://github.com/HAOGRE/homebrew-tap):
 
-Once approved:
 ```bash
+brew tap haogre/tap
 brew install --cask claude-token-monitor-bar
 ```
+
+> Submission to the official homebrew/cask repo ([#273009](https://github.com/Homebrew/homebrew-cask/pull/273009)) is on hold — it requires Apple notarization and higher project notability (≥225 stars). Starring this repo helps ⭐
 
 Then launch **ClaudeTokenMonitorBar** from Launchpad or Applications folder.
 

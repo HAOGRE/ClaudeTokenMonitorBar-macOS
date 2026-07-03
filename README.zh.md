@@ -56,14 +56,16 @@
 
 ## 安装
 
-### 方案 1：Homebrew（推荐）⏳
+### 方案 1：Homebrew（推荐）✅
 
-> **状态**：[审核中](https://github.com/Homebrew/homebrew-cask/pull/272983) — 暂不可用
+已可通过 [haogre/tap](https://github.com/HAOGRE/homebrew-tap) 安装：
 
-审核通过后：
 ```bash
+brew tap haogre/tap
 brew install --cask claude-token-monitor-bar
 ```
+
+> 提交到官方 homebrew/cask 仓库的 PR（[#273009](https://github.com/Homebrew/homebrew-cask/pull/273009)）暂时搁置——官方要求 Apple 公证及项目知名度（≥225 star）。欢迎点 star 支持 ⭐
 
 然后从启动台或应用程序文件夹启动 **ClaudeTokenMonitorBar**。
 
