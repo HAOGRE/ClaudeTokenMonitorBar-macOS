@@ -36,6 +36,28 @@ extension Color {
     }
 }
 
+// MARK: - 毛玻璃背景（与系统菜单同款 vibrancy 材质）
+
+struct VisualEffectBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = MenuEffectView()
+        v.material = .menu          // 与系统菜单同款材质
+        v.blendingMode = .behindWindow
+        v.state = .active
+        return v
+    }
+    func updateNSView(_ v: NSVisualEffectView, context: Context) {}
+}
+
+// MenuBarExtra(.window) 的宿主窗口默认不透明，需清掉窗口底色才能透出桌面
+private final class MenuEffectView: NSVisualEffectView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.isOpaque = false
+        window?.backgroundColor = .clear
+    }
+}
+
 struct Theme {
     let isDark: Bool
 
@@ -231,7 +253,7 @@ struct StatusBarView: View {
             .frame(height: max(0, panelHeight - effectiveHeaderHeight))
         }
         .frame(width: DashboardLayout.panelWidth, height: panelHeight)
-        .background(theme.panelBg)
+        .background(VisualEffectBackground())
         .clipShape(RoundedRectangle(cornerRadius: DashboardLayout.panelRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DashboardLayout.panelRadius, style: .continuous)

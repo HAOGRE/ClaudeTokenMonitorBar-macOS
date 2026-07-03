@@ -129,7 +129,7 @@ struct SettingsView: View {
             Spacer(minLength: 0)
         }
         .frame(width: 340)
-        .background(theme.panelBg)
+        .background(VisualEffectBackground())
     }
 
     private func settingsSectionHeader(title: String, icon: String) -> some View {
