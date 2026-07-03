@@ -42,16 +42,24 @@ A native macOS menu bar companion app that monitors your **Claude Code** token u
 
 ## Install
 
-### Option 1: Download DMG (Recommended)
+### Option 1: Homebrew (Recommended)
 
-1. Go to [Releases](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
-2. Download `ClaudeTokenMonitorBar-v1.2.0.dmg`
-3. Open DMG, drag `ClaudeTokenMonitorBar.app` to **Applications**
-4. Launch — the app appears in the menu bar immediately (no Dock icon by default)
+```bash
+brew install --cask claude-token-monitor-bar
+```
+
+Then launch **ClaudeTokenMonitor** from Launchpad or Applications folder.
 
 > **First launch**: right-click → Open to bypass Gatekeeper, or go to System Settings → Privacy & Security → Open Anyway.
 
-### Option 2: Build from Source
+### Option 2: Download DMG
+
+1. Go to [Releases](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
+2. Download `ClaudeTokenMonitorBar-v1.2.1.dmg`
+3. Open DMG, drag `ClaudeTokenMonitor.app` to **Applications**
+4. Launch — the app appears in the menu bar immediately (no Dock icon by default)
+
+### Option 3: Build from Source
 
 ```bash
 git clone https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS.git
