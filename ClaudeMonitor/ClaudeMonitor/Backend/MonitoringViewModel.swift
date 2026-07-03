@@ -537,19 +537,23 @@ final class MonitoringViewModel {
     // iStats 风格：量级并入单位（t/s、Kt/s、Mt/s），数值不超过 3 位有效数字
     static func formatRate(_ tokensPerSec: Double) -> (value: String, unit: String) {
         func scaled(_ v: Double) -> String {
-            String(format: v < 100 ? "%.1f" : "%.0f", v)
+            String(format:  "%.0f", v)
         }
+        
         switch tokensPerSec {
         case ..<0.1:
             return ("0", "T/s")
         case ..<1_000:
             return (String(format: "%.0f", tokensPerSec), "T/s")
         case ..<1_000_000:
-            return (scaled(tokensPerSec / 1_000), "KT/s")
+            // 把 K 拼在 value 里，unit 保持 T/s
+            return (scaled(tokensPerSec / 1_000) + "K", "T/s")
         case ..<1_000_000_000:
-            return (scaled(tokensPerSec / 1_000_000), "MT/s")
+            // 把 M 拼在 value 里
+            return (scaled(tokensPerSec / 1_000_000) + "M", "T/s")
         default:
-            return (scaled(tokensPerSec / 1_000_000_000), "GT/s")
+            // 把 G 拼在 value 里
+            return (scaled(tokensPerSec / 1_000_000_000) + "G", "T/s")
         }
     }
 

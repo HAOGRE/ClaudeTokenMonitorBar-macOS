@@ -1,6 +1,6 @@
 cask "claude-token-monitor-bar" do
   version "1.2.1"
-  sha256 "469e0096c498eea3e493b76514fccdd332beac40858e353748ca90ecea06f7b7"
+  sha256 "e75eed501c1574ee9a040d54d316601d0e9812e7b8693a7d5568abcf643c256f"
 
   url "https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/download/v#{version}/ClaudeTokenMonitorBar-v#{version}.dmg"
   name "ClaudeTokenMonitorBar"
