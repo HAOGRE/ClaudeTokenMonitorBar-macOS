@@ -98,17 +98,6 @@ struct TokenRate {
     var hasActivity: Bool { inputPerSec > 0 || outputPerSec > 0 }
 }
 
-// MARK: - 后台加载结果
-
-private struct LoadResult: Sendable {
-    let allEntries: [UsageEntry]
-    let todayEntries: [UsageEntry]
-    let projectEntries: [String: [UsageEntry]]
-    let dailyEntries: [Date: [UsageEntry]]
-    let installedMcpServers: Int
-    let installedSkills: Int
-}
-
 // MARK: - 监控视图模型
 
 @Observable
@@ -134,6 +123,7 @@ final class MonitoringViewModel {
     private var inputHistory: [Double] = []
     private var outputHistory: [Double] = []
     private let historySize = 5
+    private var lastAggKey = ""
 
     init() {
         startAutoRefresh()
@@ -157,27 +147,14 @@ final class MonitoringViewModel {
         let oauthR = oauthReader
 
         // 限额数据源优先级：OAuth 官方 API → 守护进程 state 文件 → 本地 P90 估算（updateMonitoringData 内兜底）
-        let (result, state, source) = await Task.detached(priority: .userInitiated) { () -> (LoadResult, V4StateProtocol?, LimitSource) in
+        let (result, state, source) = await Task.detached(priority: .userInitiated) { () -> (TokenDataReader.AllData, V4StateProtocol?, LimitSource) in
             var v4State = await oauthR.readState()
             var source: LimitSource = v4State != nil ? .officialApi : .none
             if v4State == nil {
                 v4State = await stateR.readState()
                 if v4State != nil { source = .daemonFile }
             }
-            // 加载约半年数据以便生成 Tokenscope 风格热力图
-            let allData = reader.loadAllData(daysBack: 190)
-            return (
-                LoadResult(
-                    allEntries: allData.allEntries,
-                    todayEntries: allData.todayEntries,
-                    projectEntries: allData.projectEntries,
-                    dailyEntries: allData.dailyEntries,
-                    installedMcpServers: allData.installedMcpServers,
-                    installedSkills: allData.installedSkills
-                ),
-                v4State,
-                source
-            )
+            return (reader.loadAllData(), v4State, source)
         }.value
 
         updateMonitoringData(from: result, v4State: state, source: source)
@@ -189,14 +166,14 @@ final class MonitoringViewModel {
         isLoading = false
     }
 
-    private func updateMonitoringData(from result: LoadResult, v4State: V4StateProtocol?, source: LimitSource) {
+    private func updateMonitoringData(from result: TokenDataReader.AllData, v4State: V4StateProtocol?, source: LimitSource) {
         let now = Date()
         let calendar = Calendar.current
-        
+
         // 计算速率
         let totalInput = result.allEntries.reduce(0) { $0 + $1.inputTokens + $1.cacheReadTokens }
         let totalOutput = result.allEntries.reduce(0) { $0 + $1.outputTokens }
-        
+
         if !isFirstLoad {
             let elapsed = now.timeIntervalSince(lastSampleTime)
             if elapsed > 0 {
@@ -224,10 +201,19 @@ final class MonitoringViewModel {
 
         // 燃烧率：最近 60 分钟 token 总量 / 60（同 Claude-Code-Usage-Monitor 算法）
         let hourAgo = now.addingTimeInterval(-3600)
-        let recentTokens = result.allEntries
-            .filter { $0.timestamp >= hourAgo }
-            .reduce(0) { $0 + totalTokens(in: $1) }
-        burnRatePerMin = Double(recentTokens) / 60.0
+        burnRatePerMin = Double(totalTokens(in: entries(in: result.allEntries, from: hourAgo, to: .distantFuture))) / 60.0
+
+        // 聚合短路：条目总量、日期、聚合口径均未变时复用上次 dashboard
+        // （聚合是每次刷新最重的部分，空闲时每 5 秒白跑一遍）
+        let aggKey = "\(result.allEntries.count)|\(totalInput)|\(totalOutput)|\(calendar.startOfDay(for: now).timeIntervalSince1970)|\(AppSettings.shared.useCalendarPeriods)"
+        if aggKey == lastAggKey {
+            var updated = monitoringData
+            updated.lastUpdated = now
+            applyLimitState(to: &updated, from: result, v4State: v4State, source: source, now: now)
+            monitoringData = updated
+            return
+        }
+        lastAggKey = aggKey
 
         // 构建 Dashboard
         var dashboard = Dashboard()
@@ -261,12 +247,18 @@ final class MonitoringViewModel {
         )
 
         // 构建 Heatmap
+        // 条目已按时间升序，仅跨天时调用 Calendar（startOfDay 逐条调用是实测热点）
         var heatmapMap: [Date: Int] = [:]
+        var dayStart = Date.distantPast
+        var dayEnd = Date.distantPast
         for entry in result.allEntries {
-            let start = calendar.startOfDay(for: entry.timestamp)
-            heatmapMap[start, default: 0] += entry.inputTokens + entry.cacheCreationTokens + entry.cacheReadTokens + entry.outputTokens
+            if entry.timestamp >= dayEnd {
+                dayStart = calendar.startOfDay(for: entry.timestamp)
+                dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86400)
+            }
+            heatmapMap[dayStart, default: 0] += entry.inputTokens + entry.cacheCreationTokens + entry.cacheReadTokens + entry.outputTokens
         }
-        
+
         let startOfToday = calendar.startOfDay(for: now)
         let daysFromSunday = calendar.component(.weekday, from: startOfToday) - 1
         let heatmapStart = calendar.date(byAdding: .day, value: -(25 * 7 + daysFromSunday), to: startOfToday) ?? startOfToday
@@ -291,32 +283,42 @@ final class MonitoringViewModel {
         }
         dashboard.heatmap = heatmap
         
-        // Fallback: 官方 API 和守护进程都不可用时，使用本地 P90 估算
-        let effectiveV4State: V4StateProtocol?
-        let effectiveSource: LimitSource
-        if let v4State = v4State {
-            effectiveV4State = v4State
-            effectiveSource = source
-        } else {
-            effectiveV4State = calculateLocalRateLimits(from: result.allEntries, now: now)
-            effectiveSource = effectiveV4State != nil ? .localEstimate : .none
-        }
-
         var updated = MonitoringData()
         updated.dashboard = dashboard
         updated.lastUpdated = now
-        updated.v4State = effectiveV4State
-        updated.limitSource = effectiveSource
-
+        applyLimitState(to: &updated, from: result, v4State: v4State, source: source, now: now)
         monitoringData = updated
+    }
+
+    /// 限额状态赋值；官方 API 和守护进程都不可用时，使用本地 P90 估算兜底
+    private func applyLimitState(to data: inout MonitoringData, from result: TokenDataReader.AllData, v4State: V4StateProtocol?, source: LimitSource, now: Date) {
+        if let v4State = v4State {
+            data.v4State = v4State
+            data.limitSource = source
+        } else {
+            let estimate = calculateLocalRateLimits(from: result.allEntries, now: now)
+            data.v4State = estimate
+            data.limitSource = estimate != nil ? .localEstimate : .none
+        }
     }
     
     private enum Period { case day, week, month }
 
     private typealias PeriodWindow = (currentStart: Date, currentEnd: Date, previousStart: Date, previousEnd: Date)
 
-    private func entries(in entries: [UsageEntry], from start: Date, to end: Date) -> [UsageEntry] {
-        entries.filter { $0.timestamp >= start && $0.timestamp < end }
+    /// 区间查询：entries 已按时间升序，二分定位边界，返回切片避免复制
+    private func entries(in entries: [UsageEntry], from start: Date, to end: Date) -> ArraySlice<UsageEntry> {
+        entries[Self.lowerBound(entries, start)..<Self.lowerBound(entries, end)]
+    }
+
+    /// 第一个 timestamp >= t 的下标（数组已升序）
+    nonisolated static func lowerBound(_ entries: [UsageEntry], _ t: Date) -> Int {
+        var lo = 0, hi = entries.count
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if entries[mid].timestamp < t { lo = mid + 1 } else { hi = mid }
+        }
+        return lo
     }
 
     private func periodRange(for period: Period, now: Date, calendar: Calendar) -> PeriodWindow {
@@ -356,8 +358,8 @@ final class MonitoringViewModel {
     }
 
     private func buildPeriodReport(
-        entries: [UsageEntry],
-        previousEntries: [UsageEntry],
+        entries: ArraySlice<UsageEntry>,
+        previousEntries: ArraySlice<UsageEntry>,
         period: Period,
         now: Date,
         installedMcpServers: Int,
@@ -471,7 +473,7 @@ final class MonitoringViewModel {
         }
     }
 
-    private func totalTokens(in entries: [UsageEntry]) -> Int {
+    private func totalTokens<S: Sequence>(in entries: S) -> Int where S.Element == UsageEntry {
         entries.reduce(0) { $0 + totalTokens(in: $1) }
     }
 

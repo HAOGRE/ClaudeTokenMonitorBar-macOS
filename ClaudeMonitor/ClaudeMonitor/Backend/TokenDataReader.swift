@@ -265,17 +265,22 @@ class TokenDataReader {
 
     // MARK: - 公共接口
 
-    /// 一次文件扫描产出所有聚合所需的原始分组，供 MonitoringViewModel 使用
+    /// 一次文件扫描产出聚合所需的全量条目，供 MonitoringViewModel 使用
     struct AllData: Sendable {
         let allEntries: [UsageEntry]
-        let todayEntries: [UsageEntry]
-        let projectEntries: [String: [UsageEntry]]
-        let dailyEntries: [Date: [UsageEntry]]
         let installedMcpServers: Int
         let installedSkills: Int
     }
 
-    func loadAllData(daysBack: Int = 30) -> AllData {
+    // 快照缓存：文件集合与 mtime 均未变且均为冷文件时，直接复用上次结果
+    // （空闲时每次轮询的主要开销是缓存条目的复制 + 全量排序）
+    private var lastSnapshot: (mtimes: [String: Date], configSig: String, data: AllData)?
+
+    // 冷文件合并缓存：冷文件集合未变时复用已排序的合并结果与去重键集合
+    // （活跃期每 tick 的主要开销是全量复制 + 排序 + 重建去重键，冷文件占绝对多数）
+    private var coldCache: (mtimes: [String: Date], configSig: String, entries: [UsageEntry], keys: Set<String>)?
+
+    func loadAllData() -> AllData {
         let expandedPath = BookmarkManager.shared.resolvedPath() ?? claudeDataPath()
         let fileManager = FileManager.default
         let toolConfig = loadUserToolConfig()
@@ -284,102 +289,118 @@ class TokenDataReader {
             logger.warning("数据目录不存在: \(expandedPath)")
             return AllData(
                 allEntries: [],
-                todayEntries: [],
-                projectEntries: [:],
-                dailyEntries: [:],
                 installedMcpServers: installedMcpCount(from: [], config: toolConfig),
                 installedSkills: installedSkillCount(from: [], config: toolConfig)
             )
         }
 
-        let jsonlFiles = findJsonlFiles(in: expandedPath, fileManager: fileManager)
-        guard !jsonlFiles.isEmpty else {
+        let mtimes = findJsonlFiles(in: expandedPath, fileManager: fileManager)
+        guard !mtimes.isEmpty else {
             return AllData(
                 allEntries: [],
-                todayEntries: [],
-                projectEntries: [:],
-                dailyEntries: [:],
                 installedMcpServers: installedMcpCount(from: [], config: toolConfig),
                 installedSkills: installedSkillCount(from: [], config: toolConfig)
             )
         }
 
-        let calendar = Calendar.current
-        let now = Date()
-        let startOfToday = calendar.startOfDay(for: now)
-        let todayCutoff = startOfToday
-        let dailyCutoff = calendar.date(byAdding: .day, value: -daysBack, to: startOfToday)
-            ?? now.addingTimeInterval(-Double(daysBack) * 86400)
-
-        var seenHashes = Set<String>()
-        var allEntries: [UsageEntry] = []
-        var todayEntries: [UsageEntry] = []
-        var projectEntries: [String: [UsageEntry]] = [:]
-        var dailyEntries: [Date: [UsageEntry]] = [:]
-
-        for filePath in jsonlFiles {
-            let dirPath = (filePath as NSString).deletingLastPathComponent
-            let projectName = (dirPath as NSString).lastPathComponent
-
-            // rawEntriesForFile 带 mtime 缓存，返回文件完整条目（无时间过滤）
-            let fileEntries = rawEntriesForFile(at: filePath, seenHashes: &seenHashes, config: toolConfig)
-
-            for entry in fileEntries {
-                // 按项目：全量历史
-                projectEntries[projectName, default: []].append(entry)
-
-                // 全量历史（热力图与限额估算需要）
-                allEntries.append(entry)
-                // 最近 24h
-                if entry.timestamp >= todayCutoff {
-                    todayEntries.append(entry)
-                }
-                // 按天（仅最近 daysBack 天）
-                if entry.timestamp >= dailyCutoff {
-                    let comps = calendar.dateComponents([.year, .month, .day], from: entry.timestamp)
-                    if let dayDate = calendar.date(from: comps) {
-                        dailyEntries[dayDate, default: []].append(entry)
-                    }
-                }
-            }
+        // 冷/热分离：60 秒内有写入的为热文件（与 rawEntriesForFile 的热文件规则一致）
+        let cutoff = Date().addingTimeInterval(-60)
+        var coldMtimes: [String: Date] = [:]
+        var hotFiles: [String] = []
+        for (path, m) in mtimes {
+            if m > cutoff { hotFiles.append(path) } else { coldMtimes[path] = m }
         }
 
+        // 全冷且与快照一致：直接复用整套结果
+        if hotFiles.isEmpty, let snap = lastSnapshot, snap.mtimes == mtimes, snap.configSig == toolConfig.signature {
+            return snap.data
+        }
+
+        // 冷文件部分：集合与 mtime 未变时复用已排序合并结果
+        let cold: (entries: [UsageEntry], keys: Set<String>)
+        if let c = coldCache, c.mtimes == coldMtimes, c.configSig == toolConfig.signature {
+            cold = (c.entries, c.keys)
+        } else {
+            var keys = Set<String>()
+            var entries: [UsageEntry] = []
+            for filePath in coldMtimes.keys.sorted() {
+                entries.append(contentsOf: rawEntriesForFile(
+                    at: filePath, mtime: coldMtimes[filePath], seenHashes: &keys, alsoSeen: [], config: toolConfig
+                ))
+            }
+            entries.sort { $0.timestamp < $1.timestamp }
+            cold = (entries, keys)
+            coldCache = (coldMtimes, toolConfig.signature, entries, keys)
+        }
+
+        // 热文件：逐 tick 解析，去重时只读冷键集合（不复制大 Set），再与冷结果归并
+        var hotKeys = Set<String>()
+        var hotEntries: [UsageEntry] = []
+        for filePath in hotFiles.sorted() {
+            hotEntries.append(contentsOf: rawEntriesForFile(
+                at: filePath, mtime: mtimes[filePath], seenHashes: &hotKeys, alsoSeen: cold.keys, config: toolConfig
+            ))
+        }
+        hotEntries.sort { $0.timestamp < $1.timestamp }
+        let allEntries = mergeSorted(cold.entries, hotEntries)
+
         // 清理已删除 jsonl 文件的缓存，避免 fileCache 无上限增长
-        let currentFiles = Set(jsonlFiles)
+        let currentFiles = Set(mtimes.keys)
         fileCache = fileCache.filter { currentFiles.contains($0.key) }
 
-        allEntries.sort { $0.timestamp < $1.timestamp }
-        logger.info("loadAllData: \(allEntries.count) 条记录（来自 \(jsonlFiles.count) 个文件）")
-        return AllData(
+        logger.info("loadAllData: \(allEntries.count) 条记录（来自 \(mtimes.count) 个文件，热 \(hotFiles.count)）")
+        let data = AllData(
             allEntries: allEntries,
-            todayEntries: todayEntries,
-            projectEntries: projectEntries,
-            dailyEntries: dailyEntries,
             installedMcpServers: installedMcpCount(from: allEntries, config: toolConfig),
             installedSkills: installedSkillCount(from: allEntries, config: toolConfig)
         )
+        lastSnapshot = (mtimes, toolConfig.signature, data)
+        return data
     }
 
     // MARK: - 私有方法
 
-    /// 递归查找目录下所有 .jsonl 文件
-    private func findJsonlFiles(in dirPath: String, fileManager: FileManager) -> [String] {
-        guard let enumerator = fileManager.enumerator(atPath: dirPath) else { return [] }
-        var result: [String] = []
-        while let relative = enumerator.nextObject() as? String {
-            if relative.hasSuffix(".jsonl") {
-                result.append((dirPath as NSString).appendingPathComponent(relative))
+    /// 归并两个已按 timestamp 升序的数组
+    func mergeSorted(_ a: [UsageEntry], _ b: [UsageEntry]) -> [UsageEntry] {
+        if b.isEmpty { return a }
+        if a.isEmpty { return b }
+        var result: [UsageEntry] = []
+        result.reserveCapacity(a.count + b.count)
+        var i = 0, j = 0
+        while i < a.count && j < b.count {
+            if a[i].timestamp <= b[j].timestamp {
+                result.append(a[i]); i += 1
+            } else {
+                result.append(b[j]); j += 1
             }
+        }
+        result.append(contentsOf: a[i...])
+        result.append(contentsOf: b[j...])
+        return result
+    }
+
+    /// 递归查找目录下所有 .jsonl 文件及其 mtime
+    /// 用 URL 枚举一次性带出修改时间，避免每个文件再单独 stat（attributesOfItem 逐文件调用是实测热点）
+    private func findJsonlFiles(in dirPath: String, fileManager: FileManager) -> [String: Date] {
+        let dirURL = URL(fileURLWithPath: dirPath)
+        guard let enumerator = fileManager.enumerator(
+            at: dirURL,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: []
+        ) else { return [:] }
+
+        var result: [String: Date] = [:]
+        for case let url as URL in enumerator where url.path.hasSuffix(".jsonl") {
+            let mtime = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+            result[url.path] = mtime ?? .distantPast
         }
         return result
     }
 
     /// 读取并解析单个 JSONL 文件，带 mtime 缓存（不做时间过滤，存储完整条目）
     /// 文件 mtime 未变时直接返回缓存，同时将缓存条目的 hash 插入 seenHashes 维持去重正确性
-    private func rawEntriesForFile(at filePath: String, seenHashes: inout Set<String>, config: UserToolConfig) -> [UsageEntry] {
-        let attrs = try? FileManager.default.attributesOfItem(atPath: filePath)
-        let mtime = attrs?[.modificationDate] as? Date
-
+    /// alsoSeen：额外的只读去重键集合（冷缓存的键），避免为热文件解析复制大 Set
+    private func rawEntriesForFile(at filePath: String, mtime: Date?, seenHashes: inout Set<String>, alsoSeen: Set<String>, config: UserToolConfig) -> [UsageEntry] {
         // 只对"冷文件"（超过 60 秒未修改）使用缓存
         // 活跃文件（Claude 正在写入）mtime 精度仅 1 秒，同一秒内追加的新条目会被缓存遮蔽
         let isStale = mtime.map { Date().timeIntervalSince($0) > 60 } ?? false
@@ -433,7 +454,7 @@ class TokenDataReader {
             let uuid = (json["uuid"] as? String) ?? ""
             let entryKey = !messageId.isEmpty ? messageId : (!uuid.isEmpty ? uuid : (!requestId.isEmpty ? requestId : UUID().uuidString))
 
-            if !localKeys.contains(entryKey), seenHashes.contains(entryKey) {
+            if !localKeys.contains(entryKey), seenHashes.contains(entryKey) || alsoSeen.contains(entryKey) {
                 continue
             }
 
