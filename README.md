@@ -53,7 +53,28 @@ brew install --cask claude-token-monitor-bar
 
 Then launch **ClaudeTokenMonitorBar** from Launchpad or Applications folder.
 
-> **First launch**: right-click → Open to bypass Gatekeeper, or go to System Settings → Privacy & Security → Open Anyway.
+> **⚠️ First Launch / 首次启动**
+>
+> Since the app is not notarized, macOS Gatekeeper will show a security warning:
+>
+> ```
+> "ClaudeTokenMonitorBar" Not Opened
+> Apple could not verify "ClaudeTokenMonitorBar" is free of malware...
+> [Move to Trash] [Done]
+> ```
+>
+> **To proceed / 解决方法：**
+>
+> 1. Click **"Done"** (NOT "Move to Trash") / 点击 **"完成"**（不要点"移到废纸篓"）
+> 2. Open **System Settings → Privacy & Security** / 打开**系统设置 → 隐私与安全性**
+> 3. Scroll down to find **"ClaudeTokenMonitorBar"** was blocked / 找到 **"已阻止使用 ClaudeTokenMonitorBar"**
+> 4. Click **"Open Anyway"** / 点击 **"仍要打开"**
+> 5. Click **"Open"** on the confirmation dialog / 在确认对话框点击 **"打开"**
+>
+> **Alternative: Command Line / 命令行方式：**
+> ```bash
+> xattr -d com.apple.quarantine /Applications/ClaudeTokenMonitorBar.app
+> ```
 
 ### Option 2: Download DMG
 
