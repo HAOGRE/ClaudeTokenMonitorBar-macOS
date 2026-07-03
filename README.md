@@ -3,7 +3,7 @@
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org/)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-blue.svg)](https://developer.apple.com/xcode/swiftui/)
-[![Version](https://img.shields.io/badge/version-1.2.0-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.2.1-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A native macOS menu bar companion app that monitors your **Claude Code** token usage and costs in real-time. Built entirely in Swift/SwiftUI with zero external dependencies.
@@ -79,7 +79,7 @@ Then launch **ClaudeTokenMonitorBar** from Launchpad or Applications folder.
 > 4. Click **"Open Anyway"** / 点击 **"仍要打开"**
 > 5. Click **"Open"** on the confirmation dialog / 在确认对话框点击 **"打开"**
 >
-> **Alternative: Command Line / 备选方案：命令行方式：**
+> **Alternative: Command Line / 备选方案：命令行方式**
 > ```bash
 > xattr -d com.apple.quarantine /Applications/ClaudeTokenMonitorBar.app
 > ```

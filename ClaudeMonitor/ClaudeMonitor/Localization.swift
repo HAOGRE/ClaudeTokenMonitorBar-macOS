@@ -194,7 +194,7 @@ final class L10n {
             .trendLast30Days:        "last 30 days",
             .legendLess:             "Less",
             .legendMore:             "More",
-            .noDataError:            "No data found. Please check local usage data folder access",
+            .noDataError:            "No data found. Please check local usage data folder access permissions",
             .v4SectionTitleOfficial: "Official Limits (Live)",
             .v4SectionTitle:         "Rate Limits (monitor)",
             .v4SectionTitleEstimated:"Rate Limits (Estimated)",

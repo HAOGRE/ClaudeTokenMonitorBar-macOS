@@ -20,10 +20,10 @@
 
 ```swift
 // 在 pricingConfigs 数组中添加新模型配置
-// 格式：(关键字, 是否前缀匹配, 定价)
-// 注意：更具体的型号放在前面（前缀匹配优先）
+// 格式：(关键字, 定价)，按数组顺序做包含匹配
+// 注意：更具体的型号放在前面（如 opus-4-9 必须在 opus 之前）
 
-("new-model-4-9", true, ModelPricing(input: X.0, output: Y.0, cacheCreation: Z.0, cacheRead: W.0)),
+("new-model-4-9", ModelPricing(input: X.0, output: Y.0, cacheCreation: Z.0, cacheRead: W.0)),
 ```
 
 ### 1.3 更新模型显示名称（可选）
@@ -76,7 +76,7 @@ git commit -m "feat: 简短描述
 
 Source: 官方文档链接
 
-🤖 Generated with [Codex](https://openai.com/codex)"
+🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 ```
 
 ---
@@ -108,7 +108,7 @@ ls DerivedData/Build/Products/Release/ClaudeMonitor.app
 ```bash
 # 创建 DMG 文件
 hdiutil create -volname "ClaudeTokenMonitorBar" \
-  -srcfolder "DerivedData/Build/Products/Release/ClaudeTokenMonitorBar.app" \
+  -srcfolder "DerivedData/Build/Products/Release/ClaudeMonitor.app" \
   -ov -format UDZO \
   "ClaudeTokenMonitorBar-v{VERSION}.dmg"
 
@@ -118,7 +118,7 @@ ls -lh ClaudeTokenMonitorBar-v{VERSION}.dmg
 
 **命名规范**：
 - GitHub 分发：`ClaudeTokenMonitorBar-v{VERSION}.dmg`
-- AppStore 版本：`ClaudeTokenMonitorBar-v{VERSION}.dmg`（由 AppStore scheme 构建）
+- AppStore 版本：`AITokenMonitor-v{VERSION}.dmg`（由 AppStore scheme 构建）
 
 ### 3.3 推送到 GitHub
 

@@ -1,6 +1,6 @@
-# 重新设计计划：ClaudeTokenMonitor 仿 TokenScope 风格改造
+# 重新设计计划：ClaudeTokenMonitor 仿 Tokenscope 风格改造
 
-TokenScope 的 UI 以其精美的配色、紧凑的数据展示和直观的图表（如甜甜圈图、热力图、迷你折线图）而显得非常高级和现代。按照您的要求，我们将**使用原生 SwiftUI 1:1 完全复刻**它的视觉效果，然后再考虑后续的迭代优化。
+Tokenscope 的 UI 以其精美的配色、紧凑的数据展示和直观的图表（如甜甜圈图、热力图、迷你折线图）而显得非常高级和现代。按照您的要求，我们将**使用原生 SwiftUI 1:1 完全复刻**它的视觉效果，然后再考虑后续的迭代优化。
 
 ## 1. 视觉基础 (Colors & Typography)
 *   **主题配色 (Theme Colors)**: 
@@ -12,7 +12,7 @@ TokenScope 的 UI 以其精美的配色、紧凑的数据展示和直观的图�
     *   UI 文字使用系统自带无衬线体 `.system(design: .default)`。
 
 ## 2. 布局重构 (Layout Restructuring 1:1 复刻)
-完全抛弃现有的 `VStack` 分隔线布局，改用 TokenScope 的卡片式流式布局。
+完全抛弃现有的 `VStack` 分隔线布局，改用 Tokenscope 的卡片式流式布局。
 
 1.  **吸顶 Header**:
     *   左侧：自定义的 `TokenGlyph`（绿色方形阵列图标）和应用名称 "Tokenscope / ClaudeMonitor"。
@@ -33,13 +33,13 @@ TokenScope 的 UI 以其精美的配色、紧凑的数据展示和直观的图�
     *   底部的 7xN 方块阵列，带 Less/More 的五级颜色深浅图例。
 
 ## 3. 原有特色功能与模块化 (Legacy Features & Modularity)
-为了不丢失 ClaudeTokenMonitor 本身的实用价值，新设计将在 TokenScope 外观下完美融入原有特色：
+为了不丢失 ClaudeTokenMonitor 本身的实用价值，新设计将在 Tokenscope 外观下完美融入原有特色：
 
 1.  **实时速率监控 (Real-time RateBar)**：
     *   **位置**：放置在英雄区 (Hero Section) 和分色进度条之间。
-    *   **设计**：采用 TokenScope 的无边框微底色卡片（例如深色模式下的 `rgba(255,255,255,0.06)`），配合 `.monospaced` 字体。当有数据流时，相应的数值亮起主题色并伴随微弱的呼吸动画。
+    *   **设计**：采用 Tokenscope 的无边框微底色卡片（例如深色模式下的 `rgba(255,255,255,0.06)`），配合 `.monospaced` 字体。当有数据流时，相应的数值亮起主题色并伴随微弱的呼吸动画。
 2.  **v4 官方限制状态 (v4 Limits)**：
-    *   **位置**：放置在实时速率或图表区下方，作为一个精致的 TokenScope 风格警告卡片（带小圆角进度条）。
+    *   **位置**：放置在实时速率或图表区下方，作为一个精致的 Tokenscope 风格警告卡片（带小圆角进度条）。
 3.  **完全的模块化管理 (Modular Toggles)**：
     *   除“30天趋势图”外，原有的 `AppSettings` 模块化开关将被 **100% 保留**。
     *   用户依然可以在设置中自由开启或关闭：项目成本区 (Project)、最近记录区 (Recent)、以及新加入的热力图 (Heatmap) 等。即使关闭某些模块，整体的流式布局依然会自适应收缩，保持美观。
@@ -114,7 +114,7 @@ struct SeriesPoint: Identifiable {
 *   分配模型专属颜色（ModelStat 中的 `color`），按照成本占比排名。
 *   计算 5 级深度的热力图 `level`。
 
-## 4. 下一步行动 (Action Plan)
+## 5. 下一步行动 (Action Plan)
 1.  **数据层改造**: 先修改 `MonitoringViewModel.swift` 和相关数据读取类，填充上述新数据结构。
 2.  **构建核心原子 UI**: 实现原生的 `SegmentedControl`, `TokenGlyph`, `Sparkline`, `CostDonut` 和 `Heatmap` 视图组件。
 3.  **组装 StatusBarView**: 使用新组件完全替换现有布局，完成 1:1 像素级复刻。

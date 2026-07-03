@@ -183,7 +183,7 @@ final class MonitoringViewModel {
         updateMonitoringData(from: result, v4State: state, source: source)
 
         if result.allEntries.isEmpty && state == nil {
-            errorMessage = "未找到数据，请检查本地用量数据目录访问权限"
+            errorMessage = L10n.shared.str(.noDataError)
         }
 
         isLoading = false
