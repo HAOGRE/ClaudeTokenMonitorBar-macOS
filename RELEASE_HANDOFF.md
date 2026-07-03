@@ -1,90 +1,58 @@
-# v1.3.0 发布交接（进行中）
+# v1.3.0 发布交接
 
-最后更新：2026-07-03 16:40 GMT+8。**中断后从「剩余步骤」第 1 步继续即可。**
+**状态：✅ 已全部完成（2026-07-04）**，本文档留作下次发版的流程参考。
 
-## 本次发布内容
+## 发布内容
 
 - feat: 面板毛玻璃背景（NSVisualEffectView .menu 材质，与系统菜单一致）
 - perf: 轮询 CPU 优化（活跃期尖峰 13%→4-5%，内存抖动消除）
 - 进程显示名改为 ClaudeTokenMonitorBar（原 "Claude Token Monitor"）
 - **首个签名+公证版本**（Developer ID: hao zhang FB5Z8HKV28）
 
-## 已完成 ✅
+## 结果记录
 
-| 步骤 | 状态 |
+| 项 | 值 |
 |---|---|
-| 版本号 1.3.0 / build 10（pbxproj，未提交） | ✅ |
-| Release 构建 + Developer ID 签名（hardened runtime + timestamp） | ✅ |
-| app 公证 Accepted（提交 ID `7753aead-0feb-49c3-8535-be33668f5c9a`）+ 已装订 | ✅ |
-| `spctl -a` 验证 = "Notarized Developer ID" | ✅ |
-| DMG 已创建并签名 | ✅ |
-| DMG 公证已提交，**等待中**（提交 ID `184383eb-b7b8-44c4-a6ed-97b9bd8faa5b`） | ⏳ |
-| README.md / README.zh.md 更新到 1.3.0、删除 Gatekeeper 教程（未提交） | ✅ |
+| Release | https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/tag/v1.3.0 |
+| DMG sha256 | `4cb816d81019f9cd94d9acd5e25cb91736e5ae7f5be080691e273c113aef391b` |
+| app 公证 | `7753aead-0feb-49c3-8535-be33668f5c9a` Accepted，已装订 |
+| DMG 公证 | `b97af825-81b2-491f-9924-70b9bf91e50f` Accepted，已装订（首次提交 `184383eb...` 在 Apple 队列卡死 16h+，重新提交 2 分钟通过——**卡超过 1 小时就直接重交**） |
+| spctl 验证 | app 与 DMG 均 "Notarized Developer ID" |
+| Homebrew tap | haogre/tap 已更新 1.3.0，`brew reinstall` 端到端验证通过 |
 
-关键产物（都在磁盘上，重启不丢）：
-- DMG：`ClaudeMonitor/DerivedData/Build/Products/Release/ClaudeTokenMonitorBar-v1.3.0.dmg`
-- 已装订的 app：同目录 `ClaudeTokenMonitorBar.app`（**不要 xcodebuild clean**，否则要重签重新公证）
-- notarytool 凭据：keychain profile `CTMB_NOTARY`（Apple ID 不写在此处，见本地钥匙串该档案）
-
-## 剩余步骤（按顺序执行）
+## 下次发版流程（vX.Y.Z）
 
 ```bash
-cd /Users/haogre/github/ClaudeTokenMonitorBar-macOS/ClaudeMonitor/DerivedData/Build/Products/Release
+# 1. 升版本（pbxproj: MARKETING_VERSION / CURRENT_PROJECT_VERSION）
+# 2. 构建 + 签名
+cd ClaudeMonitor
+xcodebuild -project ClaudeMonitor.xcodeproj -scheme CTMB -configuration Release \
+  -destination 'platform=macOS' -derivedDataPath './DerivedData' build
+cd DerivedData/Build/Products/Release
+codesign --force --options runtime --timestamp \
+  --sign "Developer ID Application: hao zhang (FB5Z8HKV28)" ClaudeTokenMonitorBar.app
 
-# 1. 查公证结果（status 须为 Accepted；Invalid 则用 notarytool log 查原因）
-xcrun notarytool info 184383eb-b7b8-44c4-a6ed-97b9bd8faa5b --keychain-profile CTMB_NOTARY
+# 3. 公证 app + 装订（凭据：keychain profile CTMB_NOTARY，Apple ID 见本地钥匙串）
+ditto -c -k --keepParent ClaudeTokenMonitorBar.app app.zip
+xcrun notarytool submit app.zip --keychain-profile CTMB_NOTARY --wait && rm app.zip
+xcrun stapler staple ClaudeTokenMonitorBar.app
 
-# 2. 装订 DMG 并验证
-xcrun stapler staple ClaudeTokenMonitorBar-v1.3.0.dmg
-spctl -a -vv -t open --context context:primary-signature ClaudeTokenMonitorBar-v1.3.0.dmg   # 应输出 accepted / Notarized Developer ID
+# 4. DMG：打包 → 签名 → 公证 → 装订
+hdiutil create -volname "ClaudeTokenMonitorBar" -srcfolder ClaudeTokenMonitorBar.app \
+  -ov -format UDZO ClaudeTokenMonitorBar-vX.Y.Z.dmg
+codesign --force --timestamp --sign "Developer ID Application: hao zhang (FB5Z8HKV28)" ClaudeTokenMonitorBar-vX.Y.Z.dmg
+xcrun notarytool submit ClaudeTokenMonitorBar-vX.Y.Z.dmg --keychain-profile CTMB_NOTARY --wait
+xcrun stapler staple ClaudeTokenMonitorBar-vX.Y.Z.dmg
+spctl -a -vv -t exec ClaudeTokenMonitorBar.app          # 应输出 Notarized Developer ID
+shasum -a 256 ClaudeTokenMonitorBar-vX.Y.Z.dmg
 
-# 3. 记下 sha256（第 5 步 tap 要用）
-shasum -a 256 ClaudeTokenMonitorBar-v1.3.0.dmg
-
-# 4. 发布 GitHub Release（在仓库根目录执行）
-cd /Users/haogre/github/ClaudeTokenMonitorBar-macOS
-gh release create v1.3.0 \
-  --title "v1.3.0 - Signed & Notarized, Vibrancy UI, Performance" \
-  --notes "## What's New
-
-### ✅ Signed & Notarized by Apple
-First notarized release — no more Gatekeeper warnings on first launch.
-
-### New Features
-- Panel now uses system-menu vibrancy (translucent blur), matching native macOS menus
-- Process name now displays as ClaudeTokenMonitorBar
-
-### Performance
-- Refresh-tick CPU spikes cut from ~13% to ~4-5% during active Claude sessions
-- Eliminated ~100MB transient memory churn per refresh
-- Near-zero CPU when idle (snapshot cache)
-
-### Install
-\`\`\`bash
-brew tap haogre/tap && brew install --cask claude-token-monitor-bar
-\`\`\`
-
-**Full Changelog**: https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/compare/v1.2.1...v1.3.0"
-gh release upload v1.3.0 ClaudeMonitor/DerivedData/Build/Products/Release/ClaudeTokenMonitorBar-v1.3.0.dmg
-
-# 5. 更新 Homebrew tap（本地 tap 位置即克隆，直接改推即可）
-cd /opt/homebrew/Library/Taps/haogre/homebrew-tap
-sed -i '' 's/version "1.2.1"/version "1.3.0"/; s/sha256 ".*"/sha256 "<第3步的sha256>"/' Casks/claude-token-monitor-bar.rb
-# 同时删掉 README.md 里 --no-quarantine 那段（app 已公证，不需要了）
-brew style haogre/tap && git add -A && git commit -m "claude-token-monitor-bar 1.3.0 (signed & notarized)" && git push
-
-# 6. 验证 brew 全流程
-brew update && brew reinstall --cask haogre/tap/claude-token-monitor-bar --appdir=$(mktemp -d)
-
-# 7. 提交主仓变更（pbxproj 版本号+显示名、两个 README、本文件）并推送
-cd /Users/haogre/github/ClaudeTokenMonitorBar-macOS
-git add -A && git commit -m "release: v1.3.0 — signed & notarized, display name, docs" && git push origin main
-
-# 8.（可选）官方 homebrew/cask PR #273009：公证问题已解决，
-#    但知名度门槛（≥225 star）仍未达标，达标后向分支推新 sha256 重跑 CI 即可
+# 5. gh release create vX.Y.Z + upload DMG
+# 6. 更新 tap：/opt/homebrew/Library/Taps/haogre/homebrew-tap 里改 version + sha256，commit & push
+# 7. README 版本徽章、下载文件名同步更新
 ```
 
-## 参考
+## 官方 homebrew/cask（遗留）
 
-- 签名/公证完整流程与凭据说明：BREW_HANDOFF.md + 记忆文件 notarization-setup
-- 公证不用重新排队：已 Accepted 的提交永久有效，装订可在任何时候补做
+PR [#273009](https://github.com/Homebrew/homebrew-cask/pull/273009) 仍开着。公证要求已满足，
+仅剩知名度门槛（≥225 star 或 ≥90 fork/watch）。达标后向分支 `HAOGRE:add-claude-token-monitor-bar-1-2-1`
+推新版本 cask（更新 version/sha256）重跑 CI 即可。
