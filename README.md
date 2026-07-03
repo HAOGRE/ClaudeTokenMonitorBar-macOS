@@ -42,13 +42,16 @@ A native macOS menu bar companion app that monitors your **Claude Code** token u
 
 ## Install
 
-### Option 1: Homebrew (Recommended)
+### Option 1: Homebrew (Recommended) ⏳
 
+> **Status**: [Pending Review](https://github.com/Homebrew/homebrew-cask/pull/272983) — not yet available
+
+Once approved:
 ```bash
 brew install --cask claude-token-monitor-bar
 ```
 
-Then launch **ClaudeTokenMonitor** from Launchpad or Applications folder.
+Then launch **ClaudeTokenMonitorBar** from Launchpad or Applications folder.
 
 > **First launch**: right-click → Open to bypass Gatekeeper, or go to System Settings → Privacy & Security → Open Anyway.
 
