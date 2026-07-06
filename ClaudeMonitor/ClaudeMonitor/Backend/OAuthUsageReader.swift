@@ -134,8 +134,16 @@ actor OAuthUsageReader {
             let utilization: Double?
             let resets_at: String?
         }
+        /// 新版 API 的权威限额数组（kind: session / weekly_all）；
+        /// 顶层 five_hour/seven_day 为旧版兼容字段，会间歇性返回空值
+        struct Limit: Decodable {
+            let kind: String?
+            let percent: Double?
+            let resets_at: String?
+        }
         let five_hour: Window?
         let seven_day: Window?
+        let limits: [Limit]?
     }
 
     private enum FetchError: Error, LocalizedError {
@@ -164,13 +172,23 @@ actor OAuthUsageReader {
 
         // 映射为与守护进程 state 文件一致的结构，UI 统一处理
         // OAuth API 只有百分比 + 重置时间，没有 token 数量
-        func detail(_ window: UsageResponse.Window?) -> V4LimitDetail? {
-            guard let window else { return nil }
+        // 优先取 limits[] 数组（新版权威数据），旧版顶层字段兜底
+        func detail(kind: String, legacy: UsageResponse.Window?) -> V4LimitDetail? {
+            if let l = usage.limits?.first(where: { $0.kind == kind }),
+               l.percent != nil || l.resets_at != nil {
+                return V4LimitDetail(
+                    used_percentage: l.percent,
+                    tokens_used: nil,
+                    token_limit: nil,
+                    resets_at: l.resets_at
+                )
+            }
+            guard let legacy else { return nil }
             return V4LimitDetail(
-                used_percentage: window.utilization,
+                used_percentage: legacy.utilization,
                 tokens_used: nil,
                 token_limit: nil,
-                resets_at: window.resets_at
+                resets_at: legacy.resets_at
             )
         }
 
@@ -181,8 +199,8 @@ actor OAuthUsageReader {
             stale: false,
             plan: nil,
             limits: V4Limits(
-                five_hour: detail(usage.five_hour),
-                seven_day: detail(usage.seven_day)
+                five_hour: detail(kind: "session", legacy: usage.five_hour),
+                seven_day: detail(kind: "weekly_all", legacy: usage.seven_day)
             ),
             local: nil,
             local_history: nil
