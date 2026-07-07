@@ -168,10 +168,16 @@ macOS 应用在每个刷新周期读取此文件并显示官方 5 小时速率�
 
 ---
 
+## 安全与数据流说明
+
+为了显示官方额度，应用会读取 Claude Code 存储在 macOS 钥匙串中的 OAuth 令牌（"Claude Code-credentials"），并仅用它向官方接口 `https://api.anthropic.com/api/oauth/usage` 发送一个 `GET` 请求——与 Claude Code 的 `/usage` 命令同源。接口地址硬编码在代码中；令牌不落盘、不写日志、不发往任何其他地方。如果你拒绝钥匙串授权，应用会静默回落到本地估算，其余功能不受影响。授权弹窗会周期性重新出现：Claude Code 大约每小时续期令牌时会重建钥匙串条目，导致 "Always Allow" 授权随旧条目失效——这是 macOS 的正常安全机制，不是应用在索取更多权限。完整代码路径见 [`OAuthUsageReader.swift`](ClaudeMonitor/ClaudeMonitor/Backend/OAuthUsageReader.swift)，也可自行编译验证。
+
+---
+
 ## 常见问题
 
 **此应用会向外发送数据吗？**
-不会。它只读取本地文件（`~/.claude/projects/` 和可选的 `~/.claude-monitor/`）。零网络请求。
+几乎没有。本地会话解析（`~/.claude/projects/`、`~/.claude-monitor/`）零网络请求。唯一的网络调用是上文[安全与数据流说明](#安全与数据流说明)中的官方额度查询——仅向 `api.anthropic.com` 发一个 GET，别无其他；拒绝钥匙串授权后该请求也完全不会发生。
 
 **我需要安装 claude-code-usage-monitor 才能使用此应用吗？**
 不需要。核心 Token 监控（费用、速率、历史）可独立工作。**官方速率限制 (V4)** 区域是需要 Python 工具的可选增强功能。
@@ -189,7 +195,7 @@ macOS 应用在每个刷新周期读取此文件并显示官方 5 小时速率�
 | **文件夹访问** | 读取本地 Claude Code 会话文件位于 `~/.claude/projects/`，用于 Token 使用统计。 |
 | **钥匙串访问** | 读取 Claude Code 存储的 OAuth 令牌（"Claude Code-credentials"），用于获取官方速率限制。系统会提示输入密码 — 这是访问其他应用钥匙串项目的预期行为。 |
 
-所有数据保留在您的机器上。无外部上传。
+所有用量数据保留在您的机器上。OAuth 令牌仅会发往 `api.anthropic.com`（见[安全与数据流说明](#安全与数据流说明)）。
 
 **为什么会有 "Claude Token Monitor" 和 "AI Token Monitor" 两个版本？**
 `ClaudeTokenMonitorBar`（本仓库）是开源 GitHub 分发版本。App Store 版本也名为 `ClaudeTokenMonitorBar`，完全符合沙盒要求。

@@ -168,10 +168,16 @@ The macOS app reads this file each refresh cycle and displays the official 5-hou
 
 ---
 
+## Security & Data Flow
+
+For the official rate-limit display, the app reads the OAuth token that Claude Code stores in your macOS Keychain ("Claude Code-credentials") and sends it in a single `GET` request to `https://api.anthropic.com/api/oauth/usage` — the same official endpoint Claude Code's `/usage` command uses. The endpoint is hardcoded; the token is never written to disk, never logged, and never sent anywhere else. If you deny the Keychain prompt, the app silently falls back to local estimation and everything else keeps working. Note the prompt reappears periodically: Claude Code recreates the Keychain item when it refreshes the token (~hourly), which resets any "Always Allow" grant — this is macOS working as designed, not the app asking for more. The code path is fully auditable in [`OAuthUsageReader.swift`](ClaudeMonitor/ClaudeMonitor/Backend/OAuthUsageReader.swift), and you can build from source to verify the binary.
+
+---
+
 ## FAQ
 
 **Does this app send data externally?**
-No. It only reads local files (`~/.claude/projects/` and optionally `~/.claude-monitor/`). Zero network requests.
+Almost none. Local session parsing (`~/.claude/projects/`, `~/.claude-monitor/`) involves zero network requests. The only network call is the official rate-limit query described in [Security & Data Flow](#security--data-flow) — one GET to `api.anthropic.com`, nothing else, and it's skipped entirely if you deny Keychain access.
 
 **Do I need to install claude-code-usage-monitor to use this app?**
 No. The core token monitoring (cost, rates, history) works standalone. The **Official Rate Limits (V4)** section is an optional enhancement that requires the Python tool.
@@ -189,7 +195,7 @@ When `cost_usd` is present in the JSONL entry, that exact value is used. Otherwi
 | **Folder Access** | To read your local Claude Code session files at `~/.claude/projects/` for token usage statistics. |
 | **Keychain Access** | To read the OAuth token stored by Claude Code ("Claude Code-credentials") for fetching official rate limits. The system will prompt for your password—this is expected behavior for accessing another app's Keychain item. |
 
-All data stays on your machine. No external uploads.
+All usage data stays on your machine. The OAuth token is only ever sent to `api.anthropic.com` (see [Security & Data Flow](#security--data-flow)).
 
 **Why is there both a "Claude Token Monitor" and "AI Token Monitor" version?**
 `ClaudeTokenMonitorBar` (this repo) is the open-source GitHub distribution. The App Store version is also named `ClaudeTokenMonitorBar` with full sandbox compliance.
