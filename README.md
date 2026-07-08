@@ -5,8 +5,11 @@
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-blue.svg)](https://developer.apple.com/xcode/swiftui/)
 [![Version](https://img.shields.io/badge/version-1.3.0-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Website](https://img.shields.io/badge/Website-ctmb.haogre.com-1f9e63.svg)](https://ctmb.haogre.com)
 
 A native macOS menu bar companion app that monitors your **Claude Code** token usage and costs in real-time. Built entirely in Swift/SwiftUI with zero external dependencies.
+
+**🌐 Official website: [ctmb.haogre.com](https://ctmb.haogre.com)** &nbsp;·&nbsp; [Download](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest) &nbsp;·&nbsp; [Screenshots](https://ctmb.haogre.com/#gallery)
 
 **CTMB** is the short name for **Claude Token Monitor Bar**. The shared Xcode schemes are `CTMB` for the GitHub distribution and `CTMB AppStore` for the App Store build.
 
