@@ -3,15 +3,141 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CTMB — Claude Token Monitor Bar for macOS</title>
-<meta name="description" content="A native macOS menu bar app that monitors your Claude Code token usage and costs in real time. Pure Swift, zero dependencies, all data stays on your Mac." />
-<meta name="theme-color" content="#1f9e63" />
-<meta property="og:title" content="CTMB — Claude Token Monitor Bar" />
-<meta property="og:description" content="Real-time Claude Code token & cost monitoring, right in your macOS menu bar." />
+
+<!-- Primary -->
+<title>CTMB — Claude Token Monitor Bar for macOS | Claude Code Usage & Cost</title>
+<meta name="description" content="CTMB is a free, native macOS menu bar app that tracks your Claude Code token usage, per-model cost, and rate-limit windows in real time. Pure Swift, zero dependencies, 100% local — your data never leaves your Mac." />
+<meta name="keywords" content="Claude Code, Claude token monitor, Claude usage, macOS menu bar, token cost tracker, Anthropic Claude, Claude rate limit, Claude Code cost, CTMB, AI usage monitor" />
+<meta name="author" content="HAOGRE" />
+<meta name="application-name" content="CTMB" />
+<meta name="theme-color" content="#1f9e63" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#14171a" media="(prefers-color-scheme: dark)" />
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+<meta name="format-detection" content="telephone=no" />
+<link rel="canonical" href="https://ctmb.haogre.com/" />
+
+<!-- Icons / PWA -->
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23e8622c'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white' font-family='-apple-system,Helvetica,Arial' font-weight='800'%3EC%3C/text%3E%3C/svg%3E" />
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+
+<!-- Open Graph -->
 <meta property="og:type" content="website" />
-<meta property="og:url" content="https://ctmb.haogre.com" />
-<meta property="og:image" content="https://ctmb.haogre.com/assets/screenshots/dark-day.png" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23e8622c'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white' font-family='-apple-system,Helvetica,Arial' font-weight='800'%3EC%3C/text%3E%3C/svg%3E" />
+<meta property="og:site_name" content="CTMB — Claude Token Monitor Bar" />
+<meta property="og:title" content="CTMB — Claude Code usage, live in your macOS menu bar" />
+<meta property="og:description" content="Real-time Claude Code token rates, per-model cost and rate-limit windows in a native macOS menu bar app. Free, open source, 100% local." />
+<meta property="og:url" content="https://ctmb.haogre.com/" />
+<meta property="og:image" content="https://ctmb.haogre.com/assets/og-image.png" />
+<meta property="og:image:secure_url" content="https://ctmb.haogre.com/assets/og-image.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="CTMB — Claude Token Monitor Bar for macOS" />
+<meta property="og:locale" content="en_US" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="CTMB — Claude Code usage, live in your macOS menu bar" />
+<meta name="twitter:description" content="Real-time Claude Code token rates, per-model cost and rate-limit windows. Native macOS, free & open source, 100% local." />
+<meta name="twitter:image" content="https://ctmb.haogre.com/assets/og-image.png" />
+<meta name="twitter:image:alt" content="CTMB — Claude Token Monitor Bar for macOS" />
+
+<!-- Structured data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://ctmb.haogre.com/#website",
+      "url": "https://ctmb.haogre.com/",
+      "name": "CTMB — Claude Token Monitor Bar",
+      "description": "Native macOS menu bar app for monitoring Claude Code token usage and cost in real time.",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://ctmb.haogre.com/#app",
+      "name": "CTMB — Claude Token Monitor Bar",
+      "alternateName": "Claude Token Monitor Bar",
+      "description": "A native macOS menu bar app that monitors Claude Code token usage, per-model cost, and rate-limit windows in real time. Pure Swift, zero dependencies, fully on-device.",
+      "url": "https://ctmb.haogre.com/",
+      "applicationCategory": "DeveloperApplication",
+      "applicationSubCategory": "Menu Bar Utility",
+      "operatingSystem": "macOS 14.0 or later",
+      "processorRequirements": "Apple Silicon or Intel (Universal)",
+      "softwareVersion": "1.3.1",
+      "downloadUrl": "https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest",
+      "installUrl": "https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest",
+      "screenshot": "https://ctmb.haogre.com/assets/screenshots/dark-day.png",
+      "image": "https://ctmb.haogre.com/assets/og-image.png",
+      "license": "https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/blob/main/LICENSE",
+      "isAccessibleForFree": true,
+      "featureList": [
+        "Live menu bar token rates",
+        "Per-model cost breakdown (Fable 5, Opus, Sonnet, Haiku)",
+        "Official 5-hour and 7-day rate-limit windows",
+        "GitHub-style yearly activity heatmap",
+        "Day / Week / Month views",
+        "100% local, no network requests"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "HAOGRE",
+        "url": "https://github.com/HAOGRE"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://ctmb.haogre.com/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does CTMB send my data anywhere?",
+          "acceptedAnswer": {"@type": "Answer", "text": "No. CTMB only reads the local session files Claude Code writes on your Mac. It makes zero network requests, has no daemon and no accounts — your usage data never leaves your machine."}
+        },
+        {
+          "@type": "Question",
+          "name": "Is CTMB free?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Yes. CTMB is free and open source under the MIT license. Download the DMG from GitHub releases or build it from source."}
+        },
+        {
+          "@type": "Question",
+          "name": "What do I need to run CTMB?",
+          "acceptedAnswer": {"@type": "Answer", "text": "macOS 14 or later and Claude Code installed. CTMB is a universal binary that runs natively on both Apple Silicon and Intel Macs."}
+        },
+        {
+          "@type": "Question",
+          "name": "How accurate is the cost estimate?",
+          "acceptedAnswer": {"@type": "Answer", "text": "When a session entry already includes an exact cost, CTMB uses it directly. Otherwise it calculates cost from the official Anthropic pricing table for each model (Fable 5, Opus, Sonnet, Haiku)."}
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need claude-code-usage-monitor?",
+          "acceptedAnswer": {"@type": "Answer", "text": "No. Core token, cost and history tracking works standalone. The official 5-hour and 7-day rate-limit windows appear as an optional enhancement when the claude-code-usage-monitor tool is also running."}
+        }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://ctmb.haogre.com/#breadcrumb",
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://ctmb.haogre.com/"},
+        {"@type": "ListItem", "position": 2, "name": "Screenshots", "item": "https://ctmb.haogre.com/#gallery"},
+        {"@type": "ListItem", "position": 3, "name": "Features", "item": "https://ctmb.haogre.com/#features"},
+        {"@type": "ListItem", "position": 4, "name": "Pricing", "item": "https://ctmb.haogre.com/#pricing"},
+        {"@type": "ListItem", "position": 5, "name": "FAQ", "item": "https://ctmb.haogre.com/#faq"}
+      ]
+    }
+  ]
+}
+</script>
 <style>
   :root{
     --bg:#f8f9f6; --bg-soft:#eef1eb; --card:#ffffff; --card-line:#e4e8e0;
@@ -163,6 +289,18 @@
   .foot-links a:hover{color:var(--text)}
   .foot-brand{display:flex;align-items:center;gap:9px;font-weight:600;color:var(--text)}
 
+  /* ---- FAQ ---- */
+  .faq-list{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+  .faq{background:var(--card);border:1px solid var(--card-line);border-radius:14px;overflow:hidden;transition:border-color .2s}
+  .faq[open]{border-color:color-mix(in srgb,var(--accent) 40%,var(--card-line))}
+  .faq summary{list-style:none;cursor:pointer;padding:18px 22px;font-size:16px;font-weight:600;
+    display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";font-size:22px;font-weight:400;color:var(--accent);transition:transform .2s;line-height:1}
+  .faq[open] summary::after{transform:rotate(45deg)}
+  .faq p{padding:0 22px 20px;color:var(--muted);font-size:15px;line-height:1.6;margin:0}
+  .faq p a{color:var(--accent)}
+
   .reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
   .reveal.in{opacity:1;transform:none}
 </style>
@@ -176,6 +314,7 @@
       <a href="#gallery">Screenshots</a>
       <a href="#features">Features</a>
       <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
       <a href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS" target="_blank" rel="noopener">GitHub</a>
       <a class="nav-cta" href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest" target="_blank" rel="noopener">Download</a>
     </div>
@@ -294,6 +433,23 @@
       </table>
     </div>
     <p class="price-note">Source: <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Anthropic official pricing</a></p>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="tag">FAQ</span>
+      <h2>Questions, answered</h2>
+      <p>Everything you might want to know before installing CTMB.</p>
+    </div>
+    <div class="faq-list">
+      <details class="faq reveal"><summary>Does CTMB send my data anywhere?</summary><p>No. CTMB only reads the local session files Claude Code writes on your Mac. It makes zero network requests, has no daemon and no accounts — your usage data never leaves your machine.</p></details>
+      <details class="faq reveal"><summary>Is CTMB free?</summary><p>Yes. CTMB is free and open source under the MIT license. Download the DMG from GitHub releases, or build it from source.</p></details>
+      <details class="faq reveal"><summary>What do I need to run CTMB?</summary><p>macOS 14 or later and Claude Code installed. CTMB is a universal binary that runs natively on both Apple Silicon and Intel Macs.</p></details>
+      <details class="faq reveal"><summary>How accurate is the cost estimate?</summary><p>When a session entry already includes an exact cost, CTMB uses it directly. Otherwise it calculates cost from the official Anthropic pricing table for each model — Fable&nbsp;5, Opus, Sonnet and Haiku.</p></details>
+      <details class="faq reveal"><summary>Do I need claude-code-usage-monitor?</summary><p>No. Core token, cost and history tracking works standalone. The official 5-hour and 7-day rate-limit windows appear as an optional enhancement when the <a href="https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor" target="_blank" rel="noopener">claude-code-usage-monitor</a> tool is also running.</p></details>
+    </div>
   </div>
 </section>
 
