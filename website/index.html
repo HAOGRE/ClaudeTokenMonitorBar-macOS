@@ -67,7 +67,6 @@
       "applicationSubCategory": "Menu Bar Utility",
       "operatingSystem": "macOS 14.0 or later",
       "processorRequirements": "Apple Silicon or Intel (Universal)",
-      "softwareVersion": "1.3.1",
       "downloadUrl": "https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest",
       "installUrl": "https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest",
       "screenshot": "https://ctmb.haogre.com/assets/screenshots/dark-day.png",
@@ -324,7 +323,7 @@
 <header id="top">
   <div class="wrap hero-grid">
     <div>
-      <span class="eyebrow"><span class="dot"></span> Native macOS · Universal Binary · v1.3.1</span>
+      <span class="eyebrow"><span class="dot"></span> Native macOS · Universal Binary · <span id="latestVer">Latest release</span></span>
       <h1>Your <span class="grad">Claude Code</span> usage, beautifully in the menu bar.</h1>
       <p class="sub">CTMB turns the JSONL files Claude Code already writes into a live dashboard — token rates, real cost per model, rate-limit windows and a year-long activity heatmap. Pure Swift, zero dependencies, everything stays on your Mac.</p>
       <div class="cta-row">
@@ -500,6 +499,17 @@
   }));
   // preload
   ['dark','light'].forEach(t=>['day','week','month'].forEach(p=>{const i=new Image();i.src=`assets/screenshots/${t}-${p}.png`;}));
+
+  // Live latest version from GitHub releases — no site change needed on new releases.
+  // Falls back silently to "Latest release" if the API is unavailable.
+  (function(){
+    const el=document.getElementById('latestVer'); if(!el) return;
+    try{const c=sessionStorage.getItem('ctmb_ver'); if(c) el.textContent=c;}catch(e){}
+    fetch('https://api.github.com/repos/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest',{headers:{Accept:'application/vnd.github+json'}})
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d&&d.tag_name){ el.textContent=d.tag_name; try{sessionStorage.setItem('ctmb_ver',d.tag_name);}catch(e){} }})
+      .catch(()=>{});
+  })();
 </script>
 </body>
 </html>

@@ -14,6 +14,9 @@ rsync -az --delete \
   --exclude 'deploy.sh' --exclude 'nginx-ctmb.conf' --exclude 'README.md' \
   "$DIR/" "$HOST:$WEBROOT/"
 
+echo "→ Stamping sitemap lastmod = $(date +%F)"
+ssh "$HOST" "sed -i 's#<lastmod>.*</lastmod>#<lastmod>$(date +%F)</lastmod>#' $WEBROOT/sitemap.xml"
+
 echo "→ Installing nginx server block"
 scp "$DIR/nginx-ctmb.conf" "$HOST:/etc/nginx/sites-available/ctmb"
 ssh "$HOST" "ln -sf /etc/nginx/sites-available/ctmb /etc/nginx/sites-enabled/ctmb && nginx -t && systemctl reload nginx"
