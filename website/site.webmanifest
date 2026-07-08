@@ -1,0 +1,14 @@
+{
+  "name": "CTMB — Claude Token Monitor Bar",
+  "short_name": "CTMB",
+  "description": "Native macOS menu bar app that monitors Claude Code token usage and cost in real time.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#14171a",
+  "theme_color": "#1f9e63",
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
