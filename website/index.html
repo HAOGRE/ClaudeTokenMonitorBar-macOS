@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CTMB — Claude Token Monitor Bar for macOS</title>
+<meta name="description" content="A native macOS menu bar app that monitors your Claude Code token usage and costs in real time. Pure Swift, zero dependencies, all data stays on your Mac." />
+<meta name="theme-color" content="#cc785c" />
+<meta property="og:title" content="CTMB — Claude Token Monitor Bar" />
+<meta property="og:description" content="Real-time Claude Code token & cost monitoring, right in your macOS menu bar." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://ctmb.haogre.com" />
+<meta property="og:image" content="https://ctmb.haogre.com/assets/screenshot.png" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23cc785c'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='white' font-family='-apple-system,Helvetica,Arial' font-weight='700'%3EC%3C/text%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#faf9f5; --bg-soft:#f2efe6; --card:#ffffff; --card-line:#e9e4d7;
+    --text:#1f1d1a; --muted:#6b6459; --faint:#938b7d;
+    --accent:#cc785c; --accent-strong:#b6603f; --accent-soft:#f4e6de;
+    --shadow:0 1px 2px rgba(60,50,40,.04),0 12px 40px rgba(60,50,40,.08);
+    --radius:18px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1a1815; --bg-soft:#211e1a; --card:#232019; --card-line:#38332b;
+      --text:#f3efe6; --muted:#a89f90; --faint:#7d746a;
+      --accent:#e0906f; --accent-strong:#eba587; --accent-soft:#33271f;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 18px 50px rgba(0,0,0,.4);
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* ---- Nav ---- */
+  nav{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:saturate(180%) blur(20px);
+    background:color-mix(in srgb,var(--bg) 82%,transparent);
+    border-bottom:1px solid transparent;transition:border-color .3s;
+  }
+  nav.scrolled{border-bottom-color:var(--card-line)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em}
+  .brand .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(150deg,var(--accent),var(--accent-strong));
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;box-shadow:0 4px 12px rgba(204,120,92,.35)}
+  .nav-links{display:flex;align-items:center;gap:28px;font-size:14.5px;color:var(--muted)}
+  .nav-links a{transition:color .2s}
+  .nav-links a:hover{color:var(--text)}
+  .nav-cta{
+    background:var(--text);color:var(--bg);padding:8px 16px;border-radius:999px;
+    font-weight:600;font-size:14px;transition:transform .15s,opacity .2s;
+  }
+  .nav-cta:hover{transform:translateY(-1px);opacity:.9}
+  @media(max-width:720px){.nav-links a:not(.nav-cta){display:none}}
+
+  /* ---- Hero ---- */
+  header{position:relative;padding:88px 0 40px;text-align:center;overflow:hidden}
+  header::before{
+    content:"";position:absolute;top:-180px;left:50%;transform:translateX(-50%);
+    width:900px;height:600px;pointer-events:none;
+    background:radial-gradient(closest-side,rgba(204,120,92,.16),transparent 70%);
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;
+    color:var(--accent-strong);background:var(--accent-soft);border:1px solid var(--card-line);
+    padding:6px 14px;border-radius:999px;margin-bottom:26px;letter-spacing:.01em;
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+  h1{
+    font-size:clamp(38px,6.4vw,68px);line-height:1.04;letter-spacing:-.035em;font-weight:750;
+    max-width:14ch;margin:0 auto 22px;
+  }
+  h1 .grad{background:linear-gradient(120deg,var(--accent),var(--accent-strong));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:clamp(17px,2.4vw,21px);color:var(--muted);max-width:56ch;margin:0 auto 36px}
+  .cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+  .btn{
+    display:inline-flex;align-items:center;gap:9px;padding:14px 26px;border-radius:14px;
+    font-weight:600;font-size:15.5px;transition:transform .15s,box-shadow .2s,background .2s;
+  }
+  .btn-primary{background:linear-gradient(150deg,var(--accent),var(--accent-strong));color:#fff;box-shadow:0 8px 24px rgba(204,120,92,.35)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(204,120,92,.45)}
+  .btn-ghost{background:var(--card);color:var(--text);border:1px solid var(--card-line)}
+  .btn-ghost:hover{transform:translateY(-2px);border-color:var(--muted)}
+  .hero-meta{font-size:13.5px;color:var(--faint);margin-top:6px}
+
+  /* ---- Screenshot ---- */
+  .shot-stage{position:relative;margin:56px auto 0;max-width:400px;padding:0 12px}
+  .shot-stage::after{
+    content:"";position:absolute;inset:auto 0 -30px 0;height:120px;
+    background:radial-gradient(closest-side,rgba(204,120,92,.18),transparent 75%);z-index:-1;
+  }
+  .shot{
+    width:100%;border-radius:20px;border:1px solid var(--card-line);
+    box-shadow:var(--shadow);display:block;background:var(--card);
+  }
+
+  /* ---- Sections ---- */
+  section{padding:76px 0}
+  .section-head{text-align:center;max-width:60ch;margin:0 auto 52px}
+  .section-head .tag{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+  .section-head h2{font-size:clamp(28px,4vw,40px);letter-spacing:-.03em;font-weight:720;margin:12px 0 14px;line-height:1.1}
+  .section-head p{color:var(--muted);font-size:17px}
+
+  /* ---- Features ---- */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:860px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  .card{
+    background:var(--card);border:1px solid var(--card-line);border-radius:var(--radius);
+    padding:26px 24px;transition:transform .2s,border-color .2s,box-shadow .2s;
+  }
+  .card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--accent) 40%,var(--card-line));box-shadow:var(--shadow)}
+  .card .ico{
+    width:42px;height:42px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;
+    background:var(--accent-soft);color:var(--accent-strong);font-size:21px;
+  }
+  .card h3{font-size:17.5px;letter-spacing:-.01em;margin-bottom:7px;font-weight:650}
+  .card p{color:var(--muted);font-size:14.8px;line-height:1.55}
+
+  /* ---- Privacy strip ---- */
+  .privacy{background:var(--bg-soft);border-top:1px solid var(--card-line);border-bottom:1px solid var(--card-line)}
+  .privacy .inner{display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center}
+  @media(max-width:760px){.privacy .inner{grid-template-columns:1fr;gap:28px;text-align:center}}
+  .privacy h2{font-size:clamp(26px,3.6vw,36px);letter-spacing:-.03em;line-height:1.12;margin-bottom:16px;font-weight:720}
+  .privacy p{color:var(--muted);font-size:16.5px;margin-bottom:12px}
+  .flow{display:flex;flex-direction:column;gap:12px}
+  .flow-step{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--card-line);border-radius:14px;padding:14px 18px;font-size:14.5px}
+  .flow-step .n{flex:none;width:26px;height:26px;border-radius:8px;background:var(--accent-soft);color:var(--accent-strong);display:grid;place-items:center;font-weight:700;font-size:13px}
+  .flow-step code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--text)}
+
+  /* ---- Pricing ---- */
+  .table-wrap{overflow-x:auto;border:1px solid var(--card-line);border-radius:var(--radius);background:var(--card)}
+  table{width:100%;border-collapse:collapse;min-width:520px}
+  th,td{padding:15px 20px;text-align:left;font-size:14.5px;border-bottom:1px solid var(--card-line)}
+  th{font-weight:650;color:var(--faint);font-size:12.5px;letter-spacing:.05em;text-transform:uppercase}
+  tbody tr:last-child td{border-bottom:none}
+  td:first-child{font-weight:600}
+  .num{font-variant-numeric:tabular-nums;color:var(--muted)}
+  .price-note{text-align:center;color:var(--faint);font-size:13.5px;margin-top:16px}
+  .price-note a{color:var(--accent);border-bottom:1px solid transparent;transition:border-color .2s}
+  .price-note a:hover{border-color:var(--accent)}
+
+  /* ---- CTA ---- */
+  .final{text-align:center}
+  .final-card{
+    background:linear-gradient(150deg,var(--accent),var(--accent-strong));
+    border-radius:28px;padding:64px 32px;color:#fff;position:relative;overflow:hidden;
+    box-shadow:0 24px 60px rgba(204,120,92,.35);
+  }
+  .final-card::before{content:"";position:absolute;top:-60%;right:-10%;width:400px;height:400px;background:radial-gradient(closest-side,rgba(255,255,255,.18),transparent);pointer-events:none}
+  .final-card h2{font-size:clamp(28px,4vw,42px);letter-spacing:-.03em;margin-bottom:14px;font-weight:750}
+  .final-card p{opacity:.92;font-size:17px;max-width:44ch;margin:0 auto 30px}
+  .btn-white{background:#fff;color:var(--accent-strong);box-shadow:0 8px 24px rgba(0,0,0,.15)}
+  .btn-white:hover{transform:translateY(-2px)}
+  .btn-outline{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.4)}
+  .btn-outline:hover{background:rgba(255,255,255,.2);transform:translateY(-2px)}
+
+  /* ---- Footer ---- */
+  footer{border-top:1px solid var(--card-line);padding:44px 0 56px;color:var(--muted);font-size:14px}
+  .foot-inner{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+  .foot-links{display:flex;gap:22px}
+  .foot-links a{transition:color .2s}
+  .foot-links a:hover{color:var(--text)}
+  .foot-brand{display:flex;align-items:center;gap:9px;font-weight:600;color:var(--text)}
+
+  .reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+  .reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top"><span class="logo">C</span> CTMB</a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS" target="_blank" rel="noopener">GitHub</a>
+      <a class="nav-cta" href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest" target="_blank" rel="noopener">Download</a>
+    </div>
+  </div>
+</nav>
+
+<header id="top">
+  <div class="wrap">
+    <span class="eyebrow"><span class="dot"></span> Native macOS · Universal Binary · v1.3.1</span>
+    <h1>Your <span class="grad">Claude Code</span> usage, live in the menu bar.</h1>
+    <p class="sub">CTMB tracks token rates, costs, and your official rate-limit window in real time — a tiny, native companion for Claude Code. Pure Swift, zero dependencies, everything stays on your Mac.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.5m0 0 4-4m-4 4-4-4M5 20h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download for macOS
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.36 9.36 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.35 4.79-4.58 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+    <p class="hero-meta">Free &amp; open source · macOS 14+ · Apple Silicon &amp; Intel</p>
+
+    <div class="shot-stage reveal">
+      <img class="shot" src="assets/screenshot.png" alt="CTMB detail panel showing token rates, today's cost, rate-limit window and 30-day trend" loading="eager" width="680" />
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="tag">Features</span>
+      <h2>Everything you need. Nothing you don't.</h2>
+      <p>A focused menu bar tool that surfaces exactly what matters about your Claude Code spend.</p>
+    </div>
+    <div class="grid">
+      <div class="card reveal"><div class="ico">📊</div><h3>Live menu bar rates</h3><p>Double-row input / output token rates while Claude is active, switching to accumulated cost when idle.</p></div>
+      <div class="card reveal"><div class="ico">🛡️</div><h3>Official rate limits</h3><p>The 5-hour token window with a color-coded progress bar and reset countdown, straight from the v4 state protocol.</p></div>
+      <div class="card reveal"><div class="ico">💰</div><h3>Accurate cost tracking</h3><p>Total and today's cost with exact multi-model pricing — Fable&nbsp;5, Opus, Sonnet and Haiku — down to the token.</p></div>
+      <div class="card reveal"><div class="ico">📈</div><h3>30-day trend</h3><p>A collapsible chart of daily spend, top projects by cost, and your most recent sessions at a glance.</p></div>
+      <div class="card reveal"><div class="ico">🔒</div><h3>100% local</h3><p>Reads local session files only. No network requests, no daemon, no accounts. Your data never leaves the Mac.</p></div>
+      <div class="card reveal"><div class="ico">🌐</div><h3>Native &amp; bilingual</h3><p>Pure Swift + SwiftUI with zero dependencies. Universal binary, English &amp; Chinese, follows your system locale.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="privacy" class="privacy">
+  <div class="wrap inner">
+    <div class="reveal">
+      <h2>Your usage data<br>never leaves your Mac.</h2>
+      <p>CTMB reads the JSONL session files Claude Code already writes locally, parses them, and renders the result — entirely on-device. There are no servers, no telemetry, and no sign-in.</p>
+      <p>Optionally, when <a href="https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor" target="_blank" rel="noopener" style="color:var(--accent)">claude-code-usage-monitor</a> is running, it layers in the official 5-hour rate-limit window too.</p>
+    </div>
+    <div class="flow reveal">
+      <div class="flow-step"><span class="n">1</span><span>Claude Code writes <code>~/.claude/projects/*.jsonl</code></span></div>
+      <div class="flow-step"><span class="n">2</span><span>CTMB parses tokens, computes cost, deduplicates</span></div>
+      <div class="flow-step"><span class="n">3</span><span>Rendered natively in your menu bar — every 5s</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="tag">Pricing engine</span>
+      <h2>Exact cost, every model</h2>
+      <p>CTMB uses the official Anthropic rate table. When an entry already carries <code style="font-family:ui-monospace,monospace;font-size:.9em">cost_usd</code>, that exact value is used instead.</p>
+    </div>
+    <div class="table-wrap reveal">
+      <table>
+        <thead><tr><th>Model</th><th>Input /1M</th><th>Output /1M</th><th>Cache Write /1M</th><th>Cache Read /1M</th></tr></thead>
+        <tbody>
+          <tr><td>Fable 5 / Mythos</td><td class="num">$10.00</td><td class="num">$50.00</td><td class="num">$12.50</td><td class="num">$1.00</td></tr>
+          <tr><td>Opus 4.x</td><td class="num">$5.00</td><td class="num">$25.00</td><td class="num">$6.25</td><td class="num">$0.50</td></tr>
+          <tr><td>Sonnet 4.x</td><td class="num">$3.00</td><td class="num">$15.00</td><td class="num">$3.75</td><td class="num">$0.30</td></tr>
+          <tr><td>Haiku 4.5</td><td class="num">$1.00</td><td class="num">$5.00</td><td class="num">$1.25</td><td class="num">$0.10</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="price-note">Source: <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Anthropic official pricing</a></p>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <div class="final-card reveal">
+      <h2>Install in 30 seconds.</h2>
+      <p>Download the DMG, drag CTMB to Applications, and it lands in your menu bar instantly — no Dock icon, no setup.</p>
+      <div class="cta-row">
+        <a class="btn btn-white" href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest" target="_blank" rel="noopener">Download the latest DMG</a>
+        <a class="btn btn-outline" href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS" target="_blank" rel="noopener">Star on GitHub</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div class="foot-brand"><span class="logo" style="width:24px;height:24px;border-radius:7px;background:linear-gradient(150deg,var(--accent),var(--accent-strong));display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px">C</span> Claude Token Monitor Bar</div>
+    <div class="foot-links">
+      <a href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+    </div>
+  </div>
+  <div class="wrap" style="margin-top:18px;color:var(--faint);font-size:13px">
+    Not affiliated with Anthropic. Claude is a trademark of Anthropic. Built with ♥ for the Claude Code community.
+  </div>
+</footer>
+
+<script>
+  const nav=document.getElementById('nav');
+  addEventListener('scroll',()=>nav.classList.toggle('scrolled',scrollY>8),{passive:true});
+  const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
