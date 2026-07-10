@@ -34,7 +34,7 @@ Codex CLI/桌面客户端会把会话写入 `$CODEX_HOME/sessions/YYYY/MM/DD/*.j
 2. 扫描 `sessions` 递归目录和 `archived_sessions` 顶层 JSONL 文件；无目录时返回 `nil`，代表 Codex 未安装或尚未授权。
 3. 读取 `turn_context` 中的模型标记，并把它用于之后的 token 事件；没有标记时使用 `config.toml` 的 `model`，最后回退为 `Codex`。
 4. 对每个会话按文件顺序读取 `token_count`，根据累计 `total_token_usage` 与上一个累计值计算增量。累计值不增加的事件视为重复事件并丢弃。
-5. 当旧日志缺少累计 `total_tokens` 时，使用 `last_token_usage`，并用时间戳、增量字段和事件序号组成去重键。
+5. 当旧日志缺少累计 `total_tokens` 时，使用 `last_token_usage`，并用时间戳、增量字段和事件序号组成去重键；此时 total 使用 `input_tokens + output_tokens`，因为 cached input 已包含在 input 子集中。
 6. 将增量按事件时间聚合到今日、近 7 天、近 30 天、当前会话和模型；保留最新的非空限额窗口。
 
 读取器只读 token 元数据，不保存或解析用户消息、助手文本、工具参数和文件内容。

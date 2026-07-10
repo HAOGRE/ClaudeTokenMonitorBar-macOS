@@ -105,6 +105,9 @@ struct TokenRate {
 final class MonitoringViewModel {
     var monitoringData: MonitoringData = .empty
     var tokenRate: TokenRate = TokenRate()
+    var codexUsage: CodexUsageSnapshot?
+    var codexTokenRate: TokenRate = TokenRate()
+    var codexAccessRequired = false
     var burnRatePerMin: Double = 0 // 最近 60 分钟窗口燃烧率 (tokens/min)
     var isLoading = false
     var errorMessage: String?
@@ -122,6 +125,10 @@ final class MonitoringViewModel {
 
     private var inputHistory: [Double] = []
     private var outputHistory: [Double] = []
+    private var codexInputHistory: [Double] = []
+    private var codexOutputHistory: [Double] = []
+    private var lastCodexSample: CodexTokenTotals?
+    private var lastCodexSampleTime: Date?
     private let historySize = 5
     private var lastAggKey = ""
 
@@ -145,25 +152,65 @@ final class MonitoringViewModel {
         let reader = tokenReader
         let stateR = stateReader
         let oauthR = oauthReader
+        let codexPath = BookmarkManager.shared.resolvedCodexPath()
+        let codexHomeExists = FileManager.default.fileExists(atPath: BookmarkManager.shared.defaultCodexPath)
+        let codexAccessRequired = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+            && codexHomeExists
+            && codexPath == nil
+        let codexR = CodexUsageReader(homeDirectory: codexPath)
 
         // 限额数据源优先级：OAuth 官方 API → 守护进程 state 文件 → 本地 P90 估算（updateMonitoringData 内兜底）
-        let (result, state, source) = await Task.detached(priority: .userInitiated) { () -> (TokenDataReader.AllData, V4StateProtocol?, LimitSource) in
+        let (result, state, source, codexSnapshot) = await Task.detached(priority: .userInitiated) { () -> (TokenDataReader.AllData, V4StateProtocol?, LimitSource, CodexUsageSnapshot?) in
             var v4State = await oauthR.readState()
             var source: LimitSource = v4State != nil ? .officialApi : .none
             if v4State == nil {
                 v4State = await stateR.readState()
                 if v4State != nil { source = .daemonFile }
             }
-            return (reader.loadAllData(), v4State, source)
+            return (reader.loadAllData(), v4State, source, codexR.loadSnapshot())
         }.value
 
         updateMonitoringData(from: result, v4State: state, source: source)
+        updateCodexUsage(from: codexSnapshot)
+        self.codexAccessRequired = codexAccessRequired
 
         if result.allEntries.isEmpty && state == nil {
             errorMessage = L10n.shared.str(.noDataError)
         }
 
         isLoading = false
+    }
+
+    private func updateCodexUsage(from snapshot: CodexUsageSnapshot?) {
+        guard let snapshot else {
+            if codexUsage == nil {
+                codexTokenRate = TokenRate()
+            }
+            return
+        }
+
+        let now = Date()
+        let current = snapshot.last30Days
+        if let previous = lastCodexSample,
+           let previousTime = lastCodexSampleTime {
+            let elapsed = now.timeIntervalSince(previousTime)
+            let rawRate = Self.codexRate(previous: previous, current: current, elapsed: elapsed)
+            if rawRate.hasActivity {
+                codexInputHistory.append(rawRate.inputPerSec)
+                codexOutputHistory.append(rawRate.outputPerSec)
+                if codexInputHistory.count > historySize { codexInputHistory.removeFirst() }
+                if codexOutputHistory.count > historySize { codexOutputHistory.removeFirst() }
+            }
+            let inputCount = Double(codexInputHistory.count)
+            let outputCount = Double(codexOutputHistory.count)
+            codexTokenRate = TokenRate(
+                inputPerSec: inputCount > 0 ? codexInputHistory.reduce(0, +) / inputCount : 0,
+                outputPerSec: outputCount > 0 ? codexOutputHistory.reduce(0, +) / outputCount : 0
+            )
+        }
+        lastCodexSample = current
+        lastCodexSampleTime = now
+        codexUsage = snapshot
     }
 
     private func updateMonitoringData(from result: TokenDataReader.AllData, v4State: V4StateProtocol?, source: LimitSource) {
@@ -526,6 +573,11 @@ final class MonitoringViewModel {
     func restartAutoRefresh() {
         inputHistory = []
         outputHistory = []
+        codexInputHistory = []
+        codexOutputHistory = []
+        lastCodexSample = nil
+        lastCodexSampleTime = nil
+        codexTokenRate = TokenRate()
         startAutoRefresh()
     }
 
@@ -542,6 +594,21 @@ final class MonitoringViewModel {
             return String(format: "%@$%.2fK", sign, amount / 1_000)
         }
         return String(format: "%@$%.2f", sign, amount)
+    }
+
+    nonisolated static func codexRate(
+        previous: CodexTokenTotals?,
+        current: CodexTokenTotals,
+        elapsed: TimeInterval
+    ) -> TokenRate {
+        guard let previous, elapsed > 0 else { return TokenRate() }
+        let inputDelta = current.inputTokens - previous.inputTokens
+        let outputDelta = current.outputTokens - previous.outputTokens
+        guard inputDelta >= 0, outputDelta >= 0 else { return TokenRate() }
+        return TokenRate(
+            inputPerSec: Double(inputDelta) / elapsed,
+            outputPerSec: Double(outputDelta) / elapsed
+        )
     }
 
     static func formatTokens(_ count: Int) -> String {

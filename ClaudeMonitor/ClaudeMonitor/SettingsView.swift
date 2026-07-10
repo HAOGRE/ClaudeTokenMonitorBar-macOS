@@ -7,6 +7,7 @@ struct SettingsView: View {
     private var theme: Theme { Theme(isDark: colorScheme == .dark) }
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
+    @State private var codexAuthorized = BookmarkManager.shared.hasCodexBookmark
 
     var body: some View {
         VStack(spacing: 0) {
@@ -78,6 +79,8 @@ struct SettingsView: View {
                     )
                 )
 
+                CodexAccessRow(isAuthorized: $codexAuthorized)
+
                 Divider()
 
 
@@ -139,6 +142,45 @@ struct SettingsView: View {
             .foregroundColor(theme.textSecondary)
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct CodexAccessRow: View {
+    @Binding var isAuthorized: Bool
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: Theme { Theme(isDark: colorScheme == .dark) }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "terminal.fill")
+                .foregroundColor(theme.primaryGreen)
+                .imageScale(.medium)
+                .frame(width: 22)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(L10n.shared.str(.codexGrantAccess))
+                    .font(.callout)
+                    .foregroundColor(theme.textMain)
+                Text(isAuthorized ? L10n.shared.str(.codexAccessGranted) : L10n.shared.str(.codexAccessRequired))
+                    .font(.caption2)
+                    .foregroundColor(theme.textSecondary)
+            }
+
+            Spacer()
+
+            Button {
+                if BookmarkManager.shared.requestCodexAccess() {
+                    isAuthorized = true
+                }
+            } label: {
+                Image(systemName: isAuthorized ? "checkmark.circle.fill" : "folder.badge.plus")
+                    .foregroundColor(isAuthorized ? theme.primaryGreen : theme.textSecondary)
+                    .frame(width: 26, height: 26)
+            }
+            .buttonStyle(.plain)
+            .help(L10n.shared.str(.codexGrantAccess))
+        }
+        .padding(.vertical, 2)
     }
 }
 

@@ -30,6 +30,12 @@ enum LocalizedKey {
     case requestsTitle, costTrendTitle
     case mcpCallsTitle, skillCallsTitle
     case dailyActivity
+    // Codex section
+    case codexTitle, codexTokensUnit, codexInputLabel, codexCachedInputLabel, codexOutputLabel, codexReasoningLabel
+    case codexCurrentSession, codexLastUpdated, codexRateLabel
+    case codexPrimaryWindow, codexSecondaryWindow, codexGrantAccess, codexAccessRequired, codexAccessGranted
+    case codexUnavailable, codexNoActivity
+    case codexScannedFilesFormat, codexCurrentSessionFormat
     // StatusBarView - 格式化文案（String(format:) 占位）
     case sessionsFormat        // "%@ sessions"
     case serversFormat         // "%@ servers"
@@ -111,6 +117,24 @@ final class L10n {
             .mcpCallsTitle:          "MCP 调用",
             .skillCallsTitle:        "SKILL 调用",
             .dailyActivity:          "每日活跃",
+            .codexTitle:             "CODEX TOKEN 用量",
+            .codexTokensUnit:        "tokens",
+            .codexInputLabel:        "输入",
+            .codexCachedInputLabel:  "缓存输入",
+            .codexOutputLabel:       "输出",
+            .codexReasoningLabel:    "推理输出",
+            .codexCurrentSession:    "当前会话",
+            .codexLastUpdated:       "最近活动",
+            .codexRateLabel:         "实时速率",
+            .codexPrimaryWindow:     "5 小时窗口",
+            .codexSecondaryWindow:   "7 天窗口",
+            .codexGrantAccess:       "授权 Codex 数据",
+            .codexAccessRequired:    "需要访问 Codex 会话目录",
+            .codexAccessGranted:     "Codex 数据目录已授权",
+            .codexUnavailable:       "暂无法读取 Codex 配额",
+            .codexNoActivity:        "暂无 Codex token 活动",
+            .codexScannedFilesFormat:"扫描 %@ 个文件",
+            .codexCurrentSessionFormat:"当前会话 %@ tokens",
             .sessionsFormat:         "%@ 个会话",
             .serversFormat:          "%@ 个服务",
             .skillsCountFormat:      "%@ 个技能",
@@ -180,6 +204,24 @@ final class L10n {
             .mcpCallsTitle:          "MCP CALLS",
             .skillCallsTitle:        "SKILL CALLS",
             .dailyActivity:          "DAILY ACTIVITY",
+            .codexTitle:             "CODEX TOKEN USAGE",
+            .codexTokensUnit:        "tokens",
+            .codexInputLabel:        "Input",
+            .codexCachedInputLabel:  "Cached",
+            .codexOutputLabel:       "Output",
+            .codexReasoningLabel:    "Reasoning",
+            .codexCurrentSession:    "Current session",
+            .codexLastUpdated:       "Last activity",
+            .codexRateLabel:         "Live rate",
+            .codexPrimaryWindow:     "5-hour window",
+            .codexSecondaryWindow:   "7-day window",
+            .codexGrantAccess:       "Grant Codex access",
+            .codexAccessRequired:    "Access to the Codex sessions folder is required",
+            .codexAccessGranted:     "Codex data folder authorized",
+            .codexUnavailable:       "Codex quota data unavailable",
+            .codexNoActivity:        "No Codex token activity",
+            .codexScannedFilesFormat:"Scanned %@ files",
+            .codexCurrentSessionFormat:"Current session %@ tokens",
             .sessionsFormat:         "%@ sessions",
             .serversFormat:          "%@ servers",
             .skillsCountFormat:      "%@ skills",

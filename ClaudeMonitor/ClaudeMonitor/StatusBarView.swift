@@ -212,6 +212,11 @@ struct StatusBarView: View {
                 VStack(spacing: DashboardLayout.sectionSpacing) {
                     heroSection
 
+                    if viewModel.codexUsage != nil || viewModel.codexAccessRequired {
+                        sectionDivider
+                        codexSection
+                    }
+
                     splitBarSection
                     barChartSection
 
@@ -330,6 +335,187 @@ struct StatusBarView: View {
         Rectangle()
             .fill(theme.separator)
             .frame(height: 1)
+    }
+
+    private var codexPeriod: CodexUsagePeriod {
+        switch selectedPeriod {
+        case 0: return .today
+        case 1: return .last7Days
+        default: return .last30Days
+        }
+    }
+
+    private var codexSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 7) {
+                Image(systemName: "terminal.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(theme.primaryGreen)
+                Text(l10n.str(.codexTitle))
+                    .sectionTitleFont()
+                    .foregroundColor(theme.textSecondary)
+                Spacer()
+                if let lastTokenAt = viewModel.codexUsage?.lastTokenAt {
+                    Text("\(l10n.str(.codexLastUpdated)) \(formatCodexDate(lastTokenAt))")
+                        .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                        .foregroundColor(theme.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+
+            if viewModel.codexAccessRequired {
+                codexAccessPrompt
+            } else if let usage = viewModel.codexUsage {
+                codexUsageContent(usage)
+            } else {
+                compactEmptyState(l10n.str(.codexNoActivity))
+            }
+        }
+        .padding(11)
+        .background(theme.softCardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var codexAccessPrompt: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(l10n.str(.codexAccessRequired))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                _ = BookmarkManager.shared.requestCodexAccess()
+                viewModel.refreshData()
+            } label: {
+                Label(l10n.str(.codexGrantAccess), systemImage: "folder.badge.plus")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(theme.primaryGreen)
+        }
+    }
+
+    private func codexUsageContent(_ usage: CodexUsageSnapshot) -> some View {
+        let totals = usage.totals(for: codexPeriod)
+        let formattedTotal = formatLargeNumber(totals.totalTokens)
+        let inputRate = MonitoringViewModel.formatRate(viewModel.codexTokenRate.inputPerSec)
+        let outputRate = MonitoringViewModel.formatRate(viewModel.codexTokenRate.outputPerSec)
+
+        return VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Text(formattedTotal.value)
+                    .font(.system(size: 23, weight: .heavy, design: .rounded))
+                    .foregroundColor(theme.textMain)
+                    .monospacedDigit()
+                Text(formattedTotal.suffix)
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundColor(theme.textSecondary)
+                Text(l10n.str(.codexTokensUnit))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(theme.textTertiary)
+                Spacer()
+                if !usage.models.isEmpty {
+                    Text(usage.models.keys.sorted().prefix(2).joined(separator: ", "))
+                        .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                        .foregroundColor(theme.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+
+            HStack(spacing: 6) {
+                codexMetric(label: l10n.str(.codexInputLabel), value: MonitoringViewModel.formatTokens(totals.inputTokens))
+                codexMetric(label: l10n.str(.codexCachedInputLabel), value: MonitoringViewModel.formatTokens(totals.cachedInputTokens))
+                codexMetric(label: l10n.str(.codexOutputLabel), value: MonitoringViewModel.formatTokens(totals.outputTokens))
+                codexMetric(label: l10n.str(.codexReasoningLabel), value: MonitoringViewModel.formatTokens(totals.reasoningOutputTokens))
+            }
+
+            if viewModel.codexTokenRate.hasActivity {
+                HStack(spacing: 5) {
+                    Image(systemName: "waveform.path.ecg")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(theme.primaryGreen)
+                    Text(l10n.str(.codexRateLabel))
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(theme.textSecondary)
+                    Spacer()
+                    Text("↑\(inputRate.value) \(inputRate.unit)  ↓\(outputRate.value) \(outputRate.unit)")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundColor(theme.primaryGreen)
+                }
+            }
+
+            if let currentSession = usage.currentSession {
+                Text(String(format: l10n.str(.codexCurrentSessionFormat), MonitoringViewModel.formatTokens(currentSession.totalTokens)))
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(theme.textTertiary)
+            }
+
+            if usage.primaryRateLimit == nil && usage.secondaryRateLimit == nil {
+                Text(l10n.str(.codexUnavailable))
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundColor(theme.textTertiary)
+            }
+
+            HStack(spacing: 6) {
+                if let primary = usage.primaryRateLimit {
+                    codexLimitCard(title: l10n.str(.codexPrimaryWindow), window: primary)
+                }
+                if let secondary = usage.secondaryRateLimit {
+                    codexLimitCard(title: l10n.str(.codexSecondaryWindow), window: secondary)
+                }
+            }
+
+            Text(String(format: l10n.str(.codexScannedFilesFormat), "\(usage.scannedFileCount)"))
+                .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                .foregroundColor(theme.textTertiary)
+        }
+    }
+
+    private func codexMetric(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor(theme.textMain)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(theme.textTertiary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func codexLimitCard(title: String, window: CodexRateLimitWindow) -> some View {
+        let percentage = min(max(window.usedPercent, 0), 100)
+        let tint = percentage >= 90 ? theme.danger : (percentage >= 75 ? theme.warning : theme.primaryGreen)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 3) {
+                Text(title)
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundColor(theme.textSecondary)
+                    .lineLimit(1)
+                Spacer(minLength: 2)
+                Text(String(format: "%.0f%%", percentage))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(tint)
+            }
+            ProgressView(value: percentage, total: 100)
+                .progressViewStyle(.linear)
+                .tint(tint)
+            Text(formatCodexDate(window.resetsAt))
+                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                .foregroundColor(theme.textTertiary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func formatCodexDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = Calendar.current.isDateInToday(date) ? "HH:mm" : "MM-dd HH:mm"
+        return formatter.string(from: date)
     }
     
     private var heroSection: some View {

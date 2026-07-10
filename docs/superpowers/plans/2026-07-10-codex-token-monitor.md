@@ -51,7 +51,7 @@ Run: `cd ClaudeMonitor && xcodebuild -project ClaudeMonitor.xcodeproj -scheme CT
 
 Expected: FAIL because `CodexUsageReader` and its snapshot types do not exist.
 
-- [ ] **Step 3: Implement the minimal reader.** Scan recursive `sessions` JSONL and top-level `archived_sessions` JSONL. Parse each line as `[String: Any]`, skip malformed lines, track the current model from `turn_context`, and calculate event deltas from cumulative `total_token_usage`. Use `last_token_usage` only when cumulative totals are absent. Reject negative deltas and duplicate non-increasing events. Use `total_tokens` when present; otherwise derive total from noncached input, cached input, output, and reasoning output without double counting.
+- [ ] **Step 3: Implement the minimal reader.** Scan recursive `sessions` JSONL and top-level `archived_sessions` JSONL. Parse each line as `[String: Any]`, skip malformed lines, track the current model from `turn_context`, and calculate event deltas from cumulative `total_token_usage`. Use `last_token_usage` only when cumulative totals are absent. Reject negative deltas and duplicate non-increasing events. Use `total_tokens` when present; otherwise derive total as `input_tokens + output_tokens` because cached input is already a subset of input.
 
 - [ ] **Step 4: Add remaining parser tests and run them.** Cover `rate_limits: null`, archived files, malformed lines, missing directories, day-window boundaries, current-session grouping, and config model fallback. Run the focused test command again and require all focused tests to pass.
 

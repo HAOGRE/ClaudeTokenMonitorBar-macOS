@@ -41,7 +41,7 @@ private struct MenuBarLabel: View {
     @Environment(MonitoringViewModel.self) private var viewModel
 
     var body: some View {
-        let rate = viewModel.tokenRate
+        let rate = viewModel.tokenRate.hasActivity ? viewModel.tokenRate : viewModel.codexTokenRate
         if rate.hasActivity {
             let rate1 = MonitoringViewModel.formatRate(rate.inputPerSec)
             let rate2 = MonitoringViewModel.formatRate(rate.outputPerSec)
