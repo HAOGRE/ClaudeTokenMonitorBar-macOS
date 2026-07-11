@@ -46,6 +46,8 @@ struct CodexUsageSnapshot: Sendable {
     let secondaryRateLimit: CodexRateLimitWindow?
     let lastTokenAt: Date?
     let scannedFileCount: Int
+    /// 事件按 UsageEntry 形态导出（时间升序），复用 Claude 侧 Dashboard 聚合管线
+    let entries: [UsageEntry]
 
     func totals(for period: CodexUsagePeriod) -> CodexTokenTotals {
         switch period {
@@ -113,6 +115,26 @@ struct CodexUsageReader: Sendable {
         let currentSession = latestEvent.flatMap { sessionTotals[$0.sessionID] }
         let latestLimits = events.last(where: { $0.primaryRateLimit != nil || $0.secondaryRateLimit != nil })
 
+        // Codex 的 input_tokens 含 cached_input_tokens，拆开映射：
+        // inputTokens = 非缓存输入，cacheReadTokens = 缓存输入，两者相加还原原始 input
+        let usageEntries = events.enumerated().map { index, event in
+            UsageEntry(
+                id: "codex-\(index)-\(event.timestamp.timeIntervalSince1970)",
+                timestamp: event.timestamp,
+                sessionId: event.sessionID,
+                inputTokens: max(0, event.totals.inputTokens - event.totals.cachedInputTokens),
+                outputTokens: event.totals.outputTokens,
+                cacheCreationTokens: 0,
+                cacheReadTokens: min(event.totals.cachedInputTokens, event.totals.inputTokens),
+                costUsd: 0,
+                model: event.model,
+                messageId: "",
+                requestId: "",
+                mcpServers: [],
+                skills: []
+            )
+        }
+
         return CodexUsageSnapshot(
             today: today,
             last7Days: last7Days,
@@ -122,7 +144,8 @@ struct CodexUsageReader: Sendable {
             primaryRateLimit: latestLimits?.primaryRateLimit,
             secondaryRateLimit: latestLimits?.secondaryRateLimit,
             lastTokenAt: latestEvent?.timestamp,
-            scannedFileCount: files.count
+            scannedFileCount: files.count,
+            entries: usageEntries
         )
     }
 

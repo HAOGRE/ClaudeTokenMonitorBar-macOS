@@ -25,6 +25,7 @@ struct ModelStat: Identifiable {
     var name: String
     var tokens: Int = 0
     var cost: Double = 0
+    var requests: Int = 0
 }
 
 struct NamedCount: Identifiable {
@@ -106,6 +107,8 @@ final class MonitoringViewModel {
     var monitoringData: MonitoringData = .empty
     var tokenRate: TokenRate = TokenRate()
     var codexUsage: CodexUsageSnapshot?
+    var codexDashboard: Dashboard = .empty
+    var showingCodex = false // 弹窗当前数据源；菜单栏 label 跟随同一状态
     var codexTokenRate: TokenRate = TokenRate()
     var codexAccessRequired = false
     var burnRatePerMin: Double = 0 // 最近 60 分钟窗口燃烧率 (tokens/min)
@@ -131,6 +134,7 @@ final class MonitoringViewModel {
     private var lastCodexSampleTime: Date?
     private let historySize = 5
     private var lastAggKey = ""
+    private var lastCodexAggKey = ""
 
     init() {
         startAutoRefresh()
@@ -211,6 +215,35 @@ final class MonitoringViewModel {
         lastCodexSample = current
         lastCodexSampleTime = now
         codexUsage = snapshot
+
+        // 复用 Claude 聚合管线构建 Codex Dashboard（同样的聚合短路策略）
+        let calendar = Calendar.current
+        let aggKey = "\(snapshot.entries.count)|\(snapshot.lastTokenAt?.timeIntervalSince1970 ?? 0)|\(calendar.startOfDay(for: now).timeIntervalSince1970)|\(AppSettings.shared.useCalendarPeriods)"
+        guard aggKey != lastCodexAggKey else { return }
+        lastCodexAggKey = aggKey
+
+        var dashboard = Dashboard()
+        let entries = snapshot.entries
+        let dayRange = periodRange(for: .day, now: now, calendar: calendar)
+        let weekRange = periodRange(for: .week, now: now, calendar: calendar)
+        let monthRange = periodRange(for: .month, now: now, calendar: calendar)
+        dashboard.day = buildPeriodReport(
+            entries: self.entries(in: entries, from: dayRange.currentStart, to: dayRange.currentEnd),
+            previousEntries: self.entries(in: entries, from: dayRange.previousStart, to: dayRange.previousEnd),
+            period: .day, now: now, installedMcpServers: 0, installedSkills: 0
+        )
+        dashboard.week = buildPeriodReport(
+            entries: self.entries(in: entries, from: weekRange.currentStart, to: weekRange.currentEnd),
+            previousEntries: self.entries(in: entries, from: weekRange.previousStart, to: weekRange.previousEnd),
+            period: .week, now: now, installedMcpServers: 0, installedSkills: 0
+        )
+        dashboard.month = buildPeriodReport(
+            entries: self.entries(in: entries, from: monthRange.currentStart, to: monthRange.currentEnd),
+            previousEntries: self.entries(in: entries, from: monthRange.previousStart, to: monthRange.previousEnd),
+            period: .month, now: now, installedMcpServers: 0, installedSkills: 0
+        )
+        dashboard.heatmap = buildHeatmap(from: entries, now: now, calendar: calendar)
+        codexDashboard = dashboard
     }
 
     private func updateMonitoringData(from result: TokenDataReader.AllData, v4State: V4StateProtocol?, source: LimitSource) {
@@ -293,12 +326,21 @@ final class MonitoringViewModel {
             installedSkills: result.installedSkills
         )
 
-        // 构建 Heatmap
-        // 条目已按时间升序，仅跨天时调用 Calendar（startOfDay 逐条调用是实测热点）
+        dashboard.heatmap = buildHeatmap(from: result.allEntries, now: now, calendar: calendar)
+
+        var updated = MonitoringData()
+        updated.dashboard = dashboard
+        updated.lastUpdated = now
+        applyLimitState(to: &updated, from: result, v4State: v4State, source: source, now: now)
+        monitoringData = updated
+    }
+
+    /// 构建 Heatmap：条目已按时间升序，仅跨天时调用 Calendar（startOfDay 逐条调用是实测热点）
+    private func buildHeatmap(from entries: [UsageEntry], now: Date, calendar: Calendar) -> [HeatDay] {
         var heatmapMap: [Date: Int] = [:]
         var dayStart = Date.distantPast
         var dayEnd = Date.distantPast
-        for entry in result.allEntries {
+        for entry in entries {
             if entry.timestamp >= dayEnd {
                 dayStart = calendar.startOfDay(for: entry.timestamp)
                 dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86400)
@@ -310,10 +352,10 @@ final class MonitoringViewModel {
         let daysFromSunday = calendar.component(.weekday, from: startOfToday) - 1
         let heatmapStart = calendar.date(byAdding: .day, value: -(25 * 7 + daysFromSunday), to: startOfToday) ?? startOfToday
         var heatmap: [HeatDay] = []
-        
+
         // 找出最大的 tokens 用于计算 level (0-4)
         let maxTokens = heatmapMap.values.max() ?? 1
-        
+
         var cursor = heatmapStart
         while cursor <= startOfToday {
             let tokens = heatmapMap[cursor] ?? 0
@@ -328,13 +370,7 @@ final class MonitoringViewModel {
             heatmap.append(HeatDay(date: cursor, tokens: tokens, level: level))
             cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? startOfToday.addingTimeInterval(1)
         }
-        dashboard.heatmap = heatmap
-        
-        var updated = MonitoringData()
-        updated.dashboard = dashboard
-        updated.lastUpdated = now
-        applyLimitState(to: &updated, from: result, v4State: v4State, source: source, now: now)
-        monitoringData = updated
+        return heatmap
     }
 
     /// 限额状态赋值；官方 API 和守护进程都不可用时，使用本地 P90 估算兜底
@@ -429,14 +465,14 @@ final class MonitoringViewModel {
         report.metrics = metrics
         
         // 聚合模型
-        var modelDict: [String: (tokens: Int, cost: Double)] = [:]
+        var modelDict: [String: (tokens: Int, cost: Double, requests: Int)] = [:]
         for entry in entries {
             guard !entry.model.isEmpty else { continue }
             let m = normalizeModelName(entry.model)
-            let cur = modelDict[m] ?? (0, 0.0)
-            modelDict[m] = (cur.tokens + totalTokens(in: entry), cur.cost + entry.costUsd)
+            let cur = modelDict[m] ?? (0, 0.0, 0)
+            modelDict[m] = (cur.tokens + totalTokens(in: entry), cur.cost + entry.costUsd, cur.requests + 1)
         }
-        var models = modelDict.map { k, v in ModelStat(name: k, tokens: v.tokens, cost: v.cost) }
+        var models = modelDict.map { k, v in ModelStat(name: k, tokens: v.tokens, cost: v.cost, requests: v.requests) }
         models.sort { $0.tokens > $1.tokens }
         report.models = models
 

@@ -36,6 +36,7 @@ enum LocalizedKey {
     case codexPrimaryWindow, codexSecondaryWindow, codexGrantAccess, codexAccessRequired, codexAccessGranted
     case codexUnavailable, codexNoActivity
     case codexScannedFilesFormat, codexCurrentSessionFormat
+    case sourceSwitchHelp, tokenTrendTitle
     // StatusBarView - 格式化文案（String(format:) 占位）
     case sessionsFormat        // "%@ sessions"
     case serversFormat         // "%@ servers"
@@ -135,6 +136,8 @@ final class L10n {
             .codexNoActivity:        "暂无 Codex token 活动",
             .codexScannedFilesFormat:"扫描 %@ 个文件",
             .codexCurrentSessionFormat:"当前会话 %@ tokens",
+            .sourceSwitchHelp:       "点击切换 Claude / Codex 视图",
+            .tokenTrendTitle:        "TOKEN 趋势",
             .sessionsFormat:         "%@ 个会话",
             .serversFormat:          "%@ 个服务",
             .skillsCountFormat:      "%@ 个技能",
@@ -222,6 +225,8 @@ final class L10n {
             .codexNoActivity:        "No Codex token activity",
             .codexScannedFilesFormat:"Scanned %@ files",
             .codexCurrentSessionFormat:"Current session %@ tokens",
+            .sourceSwitchHelp:       "Click to switch between Claude and Codex",
+            .tokenTrendTitle:        "TOKEN TREND",
             .sessionsFormat:         "%@ sessions",
             .serversFormat:          "%@ servers",
             .skillsCountFormat:      "%@ skills",
