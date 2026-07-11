@@ -41,17 +41,23 @@ private struct MenuBarLabel: View {
     @Environment(MonitoringViewModel.self) private var viewModel
 
     var body: some View {
-        let rate = viewModel.tokenRate
+        // 汇总 Claude + Codex 的实时速率（各自已做滑动平均）
+        let rate = TokenRate(
+            inputPerSec: viewModel.tokenRate.inputPerSec + viewModel.codexTokenRate.inputPerSec,
+            outputPerSec: viewModel.tokenRate.outputPerSec + viewModel.codexTokenRate.outputPerSec
+        )
         if rate.hasActivity {
             let rate1 = MonitoringViewModel.formatRate(rate.inputPerSec)
             let rate2 = MonitoringViewModel.formatRate(rate.outputPerSec)
             Image(nsImage: makeMenuBarImage(rate1: rate1, rate2: rate2))
                 .accessibilityLabel("↑\(rate1.value) \(rate1.unit) ↓\(rate2.value) \(rate2.unit)")
         } else {
-            // 空闲时显示今日成本，避免长期挂着 0 T/s
-            let cost = MonitoringViewModel.formatCost(viewModel.monitoringData.dashboard.day.metrics.cost)
-            Image(nsImage: makeCostImage(cost: cost))
-                .accessibilityLabel(cost)
+            // 空闲时避免长期挂着 0 T/s：Claude 显示今日成本，Codex（无成本）显示今日 token 量
+            let idle = viewModel.showingCodex
+                ? MonitoringViewModel.formatTokens(viewModel.codexDashboard.day.metrics.totalTokens)
+                : MonitoringViewModel.formatCost(viewModel.monitoringData.dashboard.day.metrics.cost)
+            Image(nsImage: makeCostImage(cost: idle))
+                .accessibilityLabel(idle)
         }
     }
 }
