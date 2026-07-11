@@ -13,6 +13,7 @@ light / dark mode.
 website/
 ├── index.html          # the whole site (inline CSS + JS)
 ├── assets/
+│   ├── og-image-v2.png  # X / Open Graph social preview
 │   └── screenshot.png   # app screenshot
 ├── nginx-ctmb.conf      # server block for the VPS
 └── deploy.sh            # rsync the site to the VPS webroot

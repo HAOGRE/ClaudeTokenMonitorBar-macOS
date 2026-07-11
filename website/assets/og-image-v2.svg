@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">CTMB, Claude Code usage in your macOS menu bar</title>
+  <desc id="desc">A dark social sharing card for CTMB with a real dashboard screenshot.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101618"/>
+      <stop offset="1" stop-color="#17211d"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#293138"/>
+      <stop offset="1" stop-color="#1b2024"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="20" stdDeviation="22" flood-color="#000000" flood-opacity=".45"/>
+    </filter>
+    <clipPath id="shotClip"><rect x="720" y="101" width="380" height="478" rx="18"/></clipPath>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#d8f4e2" stroke-opacity=".045"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <path d="M0 630C180 575 264 536 454 557c126 14 184 49 284 73H0Z" fill="#1f9e63" opacity=".1"/>
+  <path d="M42 88H560" stroke="#5fd08a" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+
+  <g transform="translate(80 86)">
+    <rect width="58" height="58" rx="16" fill="#e8622c"/>
+    <text x="29" y="42" text-anchor="middle" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800">C</text>
+    <text x="76" y="27" fill="#f0f4f1" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="800" letter-spacing="1">CTMB</text>
+    <text x="76" y="48" fill="#8d9a91" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="2">CLAUDE TOKEN MONITOR BAR</text>
+  </g>
+
+  <g transform="translate(80 206)">
+    <text fill="#f3f6f3" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="800" letter-spacing="-2">Claude Code</text>
+    <text y="68" fill="#f3f6f3" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="800" letter-spacing="-2">usage, at a glance.</text>
+    <text y="145" fill="#aab6ad" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400">Live token rates, real cost, and rate limits</text>
+    <text y="177" fill="#aab6ad" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400">in a native macOS menu bar app.</text>
+  </g>
+
+  <g transform="translate(80 515)" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">
+    <rect width="145" height="38" rx="19" fill="#173b2a" stroke="#2c7651"/>
+    <text x="72" y="25" text-anchor="middle" fill="#b8ebc8">Native macOS</text>
+    <rect x="157" width="142" height="38" rx="19" fill="#173b2a" stroke="#2c7651"/>
+    <text x="228" y="25" text-anchor="middle" fill="#b8ebc8">100% local</text>
+    <rect x="311" width="158" height="38" rx="19" fill="#3a251c" stroke="#8a5635"/>
+    <text x="390" y="25" text-anchor="middle" fill="#f4c29f">Free &amp; open source</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="704" y="85" width="412" height="510" rx="25" fill="#0d1113" stroke="#4f6158" stroke-width="2"/>
+    <rect x="720" y="101" width="380" height="478" rx="18" fill="url(#screen)"/>
+    <g clip-path="url(#shotClip)">
+      <image href="screenshots/dark-day.png" x="720" y="101" width="380" height="896" preserveAspectRatio="xMidYMin slice"/>
+    </g>
+    <circle cx="882" cy="96" r="4" fill="#53625b"/>
+  </g>
+
+  <text x="1118" y="590" text-anchor="end" fill="#5fd08a" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">ctmb.haogre.com</text>
+</svg>
