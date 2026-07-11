@@ -24,8 +24,12 @@ website/
 TLS is terminated by Cloudflare (proxied). The origin serves plain HTTP on :80.
 
 ```bash
-./deploy.sh                 # rsync to root@202.61.75.240:/var/www/ctmb
+CTMB_HOST=deploy@<ORIGIN_HOST> ./deploy.sh
 ```
+
+`CTMB_HOST` is intentionally required and should be supplied through your
+local shell environment or an SSH alias. Do not commit the origin address or
+an administrative SSH username to this public repository.
 
 On the server the site is served by the `ctmb.haogre.com` nginx server block
 (`/etc/nginx/sites-enabled/ctmb`), mirroring the existing `zenlock` site.

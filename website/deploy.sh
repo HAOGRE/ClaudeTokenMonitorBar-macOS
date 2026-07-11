@@ -2,7 +2,7 @@
 # Deploy the CTMB website to the VPS. TLS terminated by Cloudflare.
 set -euo pipefail
 
-HOST="${CTMB_HOST:-root@202.61.75.240}"
+HOST="${CTMB_HOST:?Set CTMB_HOST to the private deployment target}"
 WEBROOT="/var/www/ctmb"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
