@@ -3,7 +3,7 @@
 [![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org/)
 [![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-blue.svg)](https://developer.apple.com/xcode/swiftui/)
-[![Version](https://img.shields.io/badge/version-1.4.0-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.5.0-brightgreen.svg)](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Website](https://img.shields.io/badge/Website-ctmb.haogre.com-1f9e63.svg)](https://ctmb.haogre.com)
 
@@ -78,7 +78,7 @@ Then launch **ClaudeTokenMonitorBar** from Launchpad or Applications folder.
 ### Option 2: Download DMG
 
 1. Go to [Releases](https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest)
-2. Download `ClaudeTokenMonitorBar-v1.4.0.dmg`
+2. Download `ClaudeTokenMonitorBar-v1.5.0.dmg`
 3. Open DMG, drag `ClaudeTokenMonitorBar.app` to **Applications**
 4. Launch — the app appears in the menu bar immediately (no Dock icon by default)
 
