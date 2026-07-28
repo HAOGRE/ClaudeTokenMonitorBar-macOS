@@ -19,7 +19,6 @@ extension NSColor {
         self.init(red: r, green: g, blue: b, alpha: 1.0)
     }
 }
-
 extension Color {
     static func dynamic(light: String, dark: String) -> Color {
         return Color(NSColor(name: nil, dynamicProvider: { appearance in
@@ -141,14 +140,12 @@ struct StatusBarView: View {
     var theme: Theme { Theme(isDark: colorScheme == .dark) }
     @State private var selectedPeriod: Int = 1 // 0: Day, 1: Week, 2: Month
     @State private var showingSettings = false
-    // 放在 viewModel 上与菜单栏共享：切换视图时状态栏速率/空闲指标同步切源
-    private var showingCodex: Bool { viewModel.showingCodex }
     @State private var measuredHeaderHeight: CGFloat = 0
     @State private var measuredScrollContentHeight: CGFloat = 0
     private var settings: AppSettings { AppSettings.shared }
     private var l10n: L10n { L10n.shared }
     private var currentReport: PeriodReport {
-        let dashboard = showingCodex ? viewModel.codexDashboard : viewModel.monitoringData.dashboard
+        let dashboard = viewModel.monitoringData.dashboard
         switch selectedPeriod {
         case 0: return dashboard.day
         case 1: return dashboard.week
@@ -212,71 +209,36 @@ struct StatusBarView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 // 模块排序按关注度：①Hero ②用量图表 为固定模块；其余可在设置中隐藏
                 VStack(spacing: DashboardLayout.sectionSpacing) {
-                    if showingCodex {
-                        if viewModel.codexAccessRequired || viewModel.codexUsage == nil {
-                            codexSection
-                        } else {
-                            heroSection
+                    heroSection
 
-                            splitBarSection
-                            barChartSection
+                    splitBarSection
+                    barChartSection
 
-                            if settings.showModelsSection {
-                                sectionDivider
-                                modelsSection
-                            }
+                    if settings.showModelsSection {
+                        sectionDivider
+                        modelsSection
+                    }
 
-                            if viewModel.codexUsage?.primaryRateLimit != nil || viewModel.codexUsage?.secondaryRateLimit != nil {
-                                sectionDivider
-                                codexLimitCardsSection
-                                if settings.showTrendSection {
-                                    trendCardsSection
-                                }
-                            } else if settings.showTrendSection {
-                                sectionDivider
-                                trendCardsSection
-                            }
-
-                            sectionDivider
-                            codexSection
-
-                            if settings.showHeatmapSection {
-                                sectionDivider
-                                heatmapSection
-                            }
-                        }
-                    } else {
-                        heroSection
-
-                        splitBarSection
-                        barChartSection
-
-                        if settings.showModelsSection {
-                            sectionDivider
-                            modelsSection
-                        }
-
-                        if let limits = viewModel.monitoringData.v4State?.limits,
-                           let fiveHour = limits.five_hour {
-                            sectionDivider
-                            limitCardsSection(fiveHour: fiveHour, sevenDay: limits.seven_day)
-                            if settings.showTrendSection {
-                                trendCardsSection
-                            }
-                        } else if settings.showTrendSection {
-                            sectionDivider
+                    if let limits = viewModel.monitoringData.v4State?.limits,
+                       let fiveHour = limits.five_hour {
+                        sectionDivider
+                        limitCardsSection(fiveHour: fiveHour, sevenDay: limits.seven_day)
+                        if settings.showTrendSection {
                             trendCardsSection
                         }
+                    } else if settings.showTrendSection {
+                        sectionDivider
+                        trendCardsSection
+                    }
 
-                        if settings.showMcpSkillSection {
-                            sectionDivider
-                            mcpSkillCardsSection
-                        }
+                    if settings.showMcpSkillSection {
+                        sectionDivider
+                        mcpSkillCardsSection
+                    }
 
-                        if settings.showHeatmapSection {
-                            sectionDivider
-                            heatmapSection
-                        }
+                    if settings.showHeatmapSection {
+                        sectionDivider
+                        heatmapSection
                     }
                 }
                 .padding(.horizontal, DashboardLayout.horizontalPadding)
@@ -305,29 +267,20 @@ struct StatusBarView: View {
     
     private var headerSection: some View {
         HStack(spacing: 8) {
-            Button {
-                viewModel.showingCodex.toggle()
-            } label: {
-                HStack(spacing: 7) {
-                    Image(nsImage: NSApp.applicationIconImage)
-                        .resizable()
-                        .frame(width: 20, height: 20)
-                    Text(showingCodex ? "Codex" : "CTMB")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(theme.textMain)
-                    Image(systemName: "arrow.left.arrow.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(theme.textTertiary)
-                    if viewModel.errorMessage != nil {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(theme.warning)
-                            .help(l10n.str(.noDataError))
-                    }
+            HStack(spacing: 7) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 20, height: 20)
+                Text("CTMB")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(theme.textMain)
+                if viewModel.errorMessage != nil {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(theme.warning)
+                        .help(l10n.str(.noDataError))
                 }
             }
-            .buttonStyle(.plain)
-            .help(l10n.str(.sourceSwitchHelp))
 
             Spacer()
 
@@ -377,127 +330,6 @@ struct StatusBarView: View {
             .fill(theme.separator)
             .frame(height: 1)
     }
-
-    private var codexPeriod: CodexUsagePeriod {
-        switch selectedPeriod {
-        case 0: return .today
-        case 1: return .last7Days
-        default: return .last30Days
-        }
-    }
-
-    private var codexSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 7) {
-                Image(systemName: "terminal.fill")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(theme.primaryGreen)
-                Text(l10n.str(.codexTitle))
-                    .sectionTitleFont()
-                    .foregroundColor(theme.textSecondary)
-                Spacer()
-                if let lastTokenAt = viewModel.codexUsage?.lastTokenAt {
-                    Text("\(l10n.str(.codexLastUpdated)) \(formatCodexDate(lastTokenAt))")
-                        .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                        .foregroundColor(theme.textTertiary)
-                        .lineLimit(1)
-                }
-            }
-
-            if viewModel.codexAccessRequired {
-                codexAccessPrompt
-            } else if let usage = viewModel.codexUsage {
-                codexUsageContent(usage)
-            } else {
-                compactEmptyState(l10n.str(.codexNoActivity))
-            }
-        }
-        .padding(11)
-        .background(theme.softCardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-
-    private var codexAccessPrompt: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(l10n.str(.codexAccessRequired))
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Button {
-                _ = BookmarkManager.shared.requestCodexAccess()
-                viewModel.refreshData()
-            } label: {
-                Label(l10n.str(.codexGrantAccess), systemImage: "folder.badge.plus")
-                    .font(.system(size: 11, weight: .semibold))
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(theme.primaryGreen)
-        }
-    }
-
-    private func codexUsageContent(_ usage: CodexUsageSnapshot) -> some View {
-        let totals = usage.totals(for: codexPeriod)
-        let inputRate = MonitoringViewModel.formatRate(viewModel.codexTokenRate.inputPerSec)
-        let outputRate = MonitoringViewModel.formatRate(viewModel.codexTokenRate.outputPerSec)
-
-        return VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 6) {
-                codexMetric(label: l10n.str(.codexInputLabel), value: MonitoringViewModel.formatTokens(totals.inputTokens))
-                codexMetric(label: l10n.str(.codexCachedInputLabel), value: MonitoringViewModel.formatTokens(totals.cachedInputTokens))
-                codexMetric(label: l10n.str(.codexOutputLabel), value: MonitoringViewModel.formatTokens(totals.outputTokens))
-                codexMetric(label: l10n.str(.codexReasoningLabel), value: MonitoringViewModel.formatTokens(totals.reasoningOutputTokens))
-            }
-
-            if viewModel.codexTokenRate.hasActivity {
-                HStack(spacing: 5) {
-                    Image(systemName: "waveform.path.ecg")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(theme.primaryGreen)
-                    Text(l10n.str(.codexRateLabel))
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(theme.textSecondary)
-                    Spacer()
-                    Text("↑\(inputRate.value) \(inputRate.unit)  ↓\(outputRate.value) \(outputRate.unit)")
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundColor(theme.primaryGreen)
-                }
-            }
-
-            if usage.primaryRateLimit == nil && usage.secondaryRateLimit == nil {
-                Text(l10n.str(.codexUnavailable))
-                    .font(.system(size: 9.5, weight: .medium))
-                    .foregroundColor(theme.textTertiary)
-            }
-
-            Text(String(format: l10n.str(.codexScannedFilesFormat), "\(usage.scannedFileCount)"))
-                .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                .foregroundColor(theme.textTertiary)
-        }
-    }
-
-    private func codexMetric(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .foregroundColor(theme.textMain)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-            Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundColor(theme.textTertiary)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-
-    private func formatCodexDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.dateFormat = Calendar.current.isDateInToday(date) ? "HH:mm" : "MM-dd HH:mm"
-        return formatter.string(from: date)
-    }
     
     private var heroSection: some View {
         VStack(spacing: 6) {
@@ -543,13 +375,10 @@ struct StatusBarView: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 5) {
-                    // Codex 无成本数据（订阅制），Hero 右侧改示当前会话 token 量
-                    Text(l10n.str(showingCodex ? .codexCurrentSession : .estCost))
+                    Text(l10n.str(.estCost))
                         .font(.system(size: 10.5, weight: .bold))
                         .foregroundColor(theme.textSecondary)
-                    Text(showingCodex
-                         ? formatLargeNumberStr(viewModel.codexUsage?.currentSession?.totalTokens ?? 0)
-                         : MonitoringViewModel.formatCost(currentReport.metrics.cost))
+                    Text(MonitoringViewModel.formatCost(currentReport.metrics.cost))
                         .font(.system(size: 22, weight: .heavy, design: .rounded))
                         .foregroundColor(theme.primaryGreen)
                         .monospacedDigit()
@@ -709,7 +538,6 @@ struct StatusBarView: View {
                 )
                 let maxTokens = max(models.map(\.tokens).max() ?? 1, 1)
                 let maxCost = max(models.map(\.cost).max() ?? 0, 0.01)
-                let maxRequests = max(models.map(\.requests).max() ?? 1, 1)
 
                 HStack(spacing: 10) {
                     modelListHeader(l10n.str(.modelColumn))
@@ -719,8 +547,7 @@ struct StatusBarView: View {
                     Rectangle()
                         .fill(theme.separator)
                         .frame(width: 1, height: 15)
-                    // Codex 无成本，第二指标列改示请求数
-                    modelListHeader(l10n.str(showingCodex ? .requestsTitle : .costColumn))
+                    modelListHeader(l10n.str(.costColumn))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, 2)
@@ -731,12 +558,7 @@ struct StatusBarView: View {
                             model: model,
                             color: modelComparisonColor(for: model.name, rank: index),
                             maxTokens: maxTokens,
-                            secondValue: showingCodex
-                                ? formatWholeNumber(model.requests)
-                                : MonitoringViewModel.formatCost(model.cost),
-                            secondRatio: showingCodex
-                                ? Double(model.requests) / Double(maxRequests)
-                                : model.cost / maxCost
+                            maxCost: maxCost
                         )
                     }
                 }
@@ -751,7 +573,7 @@ struct StatusBarView: View {
             .lineLimit(1)
     }
 
-    private func modelMicroListRow(model: ModelStat, color: Color, maxTokens: Int, secondValue: String, secondRatio: Double) -> some View {
+    private func modelMicroListRow(model: ModelStat, color: Color, maxTokens: Int, maxCost: Double) -> some View {
         HStack(alignment: .center, spacing: 10) {
             HStack(spacing: 7) {
                 Circle()
@@ -778,8 +600,8 @@ struct StatusBarView: View {
                 .frame(width: 1, height: 24)
 
             modelMetricCell(
-                value: secondValue,
-                ratio: secondRatio,
+                value: MonitoringViewModel.formatCost(model.cost),
+                ratio: model.cost / maxCost,
                 color: color
             )
             .frame(maxWidth: .infinity)
@@ -836,41 +658,15 @@ struct StatusBarView: View {
                 color: theme.primaryGreen,
                 valueColor: nil
             )
-            // Codex 无成本，第二卡改示 Token 趋势
             TrendCard(
-                title: l10n.str(showingCodex ? .tokenTrendTitle : .costTrendTitle),
-                value: showingCodex
-                    ? formatLargeNumberStr(currentReport.metrics.totalTokens)
-                    : MonitoringViewModel.formatCost(currentReport.metrics.cost),
+                title: l10n.str(.costTrendTitle),
+                value: MonitoringViewModel.formatCost(currentReport.metrics.cost),
                 subtitle: trendSubtitle,
-                points: showingCodex
-                    ? currentReport.series.map { Double($0.input + $0.cache + $0.output) }
-                    : currentReport.costTrend,
+                points: currentReport.costTrend,
                 color: theme.primaryGreen,
                 valueColor: theme.primaryGreen
             )
         }
-    }
-
-    /// Codex 限额卡：把 CodexRateLimitWindow 适配成 V4LimitDetail，复用 limitMiniCard 保持 1:1 样式
-    private var codexLimitCardsSection: some View {
-        HStack(alignment: .top, spacing: 10) {
-            if let primary = viewModel.codexUsage?.primaryRateLimit {
-                limitMiniCard(title: l10n.str(.codexPrimaryWindow), detail: codexLimitDetail(primary))
-            }
-            if let secondary = viewModel.codexUsage?.secondaryRateLimit {
-                limitMiniCard(title: l10n.str(.codexSecondaryWindow), detail: codexLimitDetail(secondary))
-            }
-        }
-    }
-
-    private func codexLimitDetail(_ window: CodexRateLimitWindow) -> V4LimitDetail {
-        V4LimitDetail(
-            used_percentage: window.usedPercent,
-            tokens_used: nil,
-            token_limit: nil,
-            resets_at: ISO8601DateFormatter().string(from: window.resetsAt)
-        )
     }
 
     private func limitCardsSection(fiveHour: V4LimitDetail, sevenDay: V4LimitDetail?) -> some View {
@@ -998,7 +794,7 @@ struct StatusBarView: View {
                 .sectionTitleFont()
                 .foregroundColor(theme.textSecondary)
 
-            let heatmap = showingCodex ? viewModel.codexDashboard.heatmap : viewModel.monitoringData.dashboard.heatmap
+            let heatmap = viewModel.monitoringData.dashboard.heatmap
             if heatmap.isEmpty {
                 compactEmptyState(l10n.str(.emptyDaily))
             } else {
