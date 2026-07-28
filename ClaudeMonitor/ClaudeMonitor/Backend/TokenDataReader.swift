@@ -41,6 +41,7 @@ private struct ModelPricing {
         ("fable", ModelPricing(input: 10.0, output: 50.0, cacheCreation: 12.50, cacheRead: 1.0)),
 
         // Opus 4.5/4.6/4.7/4.8（新版定价）
+        ("opus-5", ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
         ("opus-4-5", ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
         ("opus-4-6", ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
         ("opus-4-7", ModelPricing(input: 5.0, output: 25.0, cacheCreation: 6.25, cacheRead: 0.5)),
@@ -59,14 +60,28 @@ private struct ModelPricing {
 
     /// 根据模型名称获取定价（按 pricingConfigs 顺序做包含匹配）
     /// 新增模型支持：在 pricingConfigs 数组中添加配置即可
-    static func forModel(_ model: String) -> ModelPricing {
+    static func forModel(_ model: String, at timestamp: Date) -> ModelPricing {
         let lower = model.lowercased()
+
+        if lower.contains("sonnet-5") {
+            return sonnet5Pricing(at: timestamp)
+        }
 
         for config in pricingConfigs where lower.contains(config.keyword) {
             return config.pricing
         }
 
         // 默认使用 Sonnet 定价（最保守估计）
+        return ModelPricing(input: 3.0, output: 15.0, cacheCreation: 3.75, cacheRead: 0.3)
+    }
+
+    private static func sonnet5Pricing(at timestamp: Date) -> ModelPricing {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let standardPricingStart = calendar.date(from: DateComponents(year: 2026, month: 9, day: 1))!
+        if timestamp < standardPricingStart {
+            return ModelPricing(input: 2.0, output: 10.0, cacheCreation: 2.5, cacheRead: 0.2)
+        }
         return ModelPricing(input: 3.0, output: 15.0, cacheCreation: 3.75, cacheRead: 0.3)
     }
 
@@ -91,6 +106,7 @@ private struct ModelPricing {
 /// 读取 ~/.claude/projects 下的所有 .jsonl 文件
 class TokenDataReader {
     private let logger = Logger(subsystem: "com.haogre.claudetokenmonitor", category: "tokenreader")
+    private let dataDirectory: String?
 
     // 静态 formatter 实例，进程生命周期内只创建一次
     // ISO8601DateFormatter 线程安全；DateFormatter 不线程安全，但 loadData() 有 isLoading 互斥保护
@@ -158,7 +174,9 @@ class TokenDataReader {
         }
     }
 
-    init() {}
+    init(dataDirectory: String? = nil) {
+        self.dataDirectory = dataDirectory
+    }
 
     // MARK: - 获取真实 Home 目录（绕过沙盒限制）
 
@@ -281,7 +299,7 @@ class TokenDataReader {
     private var coldCache: (mtimes: [String: Date], configSig: String, entries: [UsageEntry], keys: Set<String>)?
 
     func loadAllData() -> AllData {
-        let expandedPath = BookmarkManager.shared.resolvedPath() ?? claudeDataPath()
+        let expandedPath = dataDirectory ?? BookmarkManager.shared.resolvedPath() ?? claudeDataPath()
         let fileManager = FileManager.default
         let toolConfig = loadUserToolConfig()
 
@@ -460,7 +478,7 @@ class TokenDataReader {
 
             let isUserCommand = (json["type"] as? String) == "user"
             let model = isUserCommand ? "" : extractModel(from: json)
-            let costUsd = hasTokens ? calculateCost(from: json, model: model, tokens: tokens) : 0
+            let costUsd = hasTokens ? calculateCost(from: json, model: model, tokens: tokens, timestamp: timestamp) : 0
 
             let entry = UsageEntry(
                 id: entryKey,
@@ -691,13 +709,13 @@ class TokenDataReader {
 
     /// 计算成本（与 Python calculate_cost_for_entry AUTO 模式保持一致）
     /// AUTO 模式：优先用 JSONL 中的 cost/cost_usd 字段，如果没有则按定价模型计算
-    private func calculateCost(from json: [String: Any], model: String, tokens: TokenCounts) -> Double {
+    private func calculateCost(from json: [String: Any], model: String, tokens: TokenCounts, timestamp: Date) -> Double {
         // 优先使用 JSONL 中记录的成本
         if let cost = json["cost_usd"] as? Double, cost > 0 { return cost }
         if let cost = json["cost"] as? Double, cost > 0 { return cost }
 
         // 没有记录成本时，按模型定价计算
-        let pricing = ModelPricing.forModel(model)
+        let pricing = ModelPricing.forModel(model, at: timestamp)
         return pricing.calculateCost(
             input: tokens.input,
             output: tokens.output,

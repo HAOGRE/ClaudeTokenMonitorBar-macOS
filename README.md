@@ -128,9 +128,10 @@ The v4 rate limit section appears **only when** [claude-code-usage-monitor](http
 
 | Model | Input ($/1M) | Output ($/1M) | Cache Write ($/1M) | Cache Read ($/1M) |
 |-------|:---:|:---:|:---:|:---:|
-| Fable 5 / Mythos | $10.00 | $50.00 | $12.50 | $1.00 |
-| Opus 4.x | $5.00 | $25.00 | $6.25 | $0.50 |
-| Sonnet 4.x | $3.00 | $15.00 | $3.75 | $0.30 |
+| Fable 5 / Mythos 5 | $10.00 | $50.00 | $12.50 | $1.00 |
+| Opus 5 / 4.5–4.8 | $5.00 | $25.00 | $6.25 | $0.50 |
+| Sonnet 5 (through Aug 31, 2026) | $2.00 | $10.00 | $2.50 | $0.20 |
+| Sonnet 5 (from Sep 1, 2026) / 4.x | $3.00 | $15.00 | $3.75 | $0.30 |
 | Haiku 4.5 | $1.00 | $5.00 | $1.25 | $0.10 |
 
 If a JSONL entry includes `cost_usd`, that value is used directly (most accurate).
