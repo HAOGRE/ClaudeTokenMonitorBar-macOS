@@ -66,4 +66,9 @@ fastlane/test_output
 
 ## Build output
 DerivedData/
+DerivedData-*/
+ClaudeMonitor/build/
 *.dmg
+*.xcarchive
+review-sample/
+review-sample.zip
