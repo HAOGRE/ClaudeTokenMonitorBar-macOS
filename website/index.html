@@ -80,13 +80,24 @@
         "Official 5-hour and 7-day rate-limit windows",
         "GitHub-style yearly activity heatmap",
         "Day / Week / Month views",
-        "100% local, no network requests"
+        "Runs entirely on your Mac — no account, no daemon, no telemetry"
       ],
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "GitHub release (open source)",
+          "price": "0",
+          "priceCurrency": "USD",
+          "url": "https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest"
+        },
+        {
+          "@type": "Offer",
+          "name": "Mac App Store",
+          "price": "0.99",
+          "priceCurrency": "USD",
+          "url": "https://apps.apple.com/app/id6762977291?mt=12"
+        }
+      ],
       "author": {
         "@type": "Person",
         "name": "HAOGRE",
@@ -100,12 +111,17 @@
         {
           "@type": "Question",
           "name": "Does CTMB send my data anywhere?",
-          "acceptedAnswer": {"@type": "Answer", "text": "No. CTMB only reads the local session files Claude Code writes on your Mac. It makes zero network requests, has no daemon and no accounts — your usage data never leaves your machine."}
+          "acceptedAnswer": {"@type": "Answer", "text": "No. CTMB reads the local session files Claude Code writes on your Mac and that data never leaves your machine. There is no daemon, no account and no telemetry. The only network request it makes is to the official usage endpoint, to read your own account's rate limits, and only when you are already signed in."}
         },
         {
           "@type": "Question",
           "name": "Is CTMB free?",
           "acceptedAnswer": {"@type": "Answer", "text": "Yes. CTMB is free and open source under the MIT license. Download the DMG from GitHub releases or build it from source."}
+        },
+        {
+          "@type": "Question",
+          "name": "What's the difference between the GitHub version and the Mac App Store one?",
+          "acceptedAnswer": {"@type": "Answer", "text": "Same app, same features. The GitHub build is free and open source, but you update it yourself and have to clear Gatekeeper on first launch. The Mac App Store build costs $0.99, is sandboxed, updates automatically, and is listed as Usage Monitor for AI Token because App Store rules do not allow a third-party product name in the app's title."}
         },
         {
           "@type": "Question",
@@ -316,6 +332,7 @@
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
       <a href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://apps.apple.com/app/id6762977291?mt=12" target="_blank" rel="noopener">App Store</a>
       <a class="nav-cta" href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest" target="_blank" rel="noopener">Download</a>
     </div>
   </div>
@@ -336,8 +353,12 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.36 9.36 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.35 4.79-4.58 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
           View on GitHub
         </a>
+        <a class="btn btn-ghost" href="https://apps.apple.com/app/id6762977291?mt=12" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16.36 12.65c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3-.79-1.55.02-2.98.9-3.77 2.28-1.61 2.79-.41 6.93 1.15 9.2.77 1.11 1.68 2.36 2.87 2.31 1.15-.05 1.59-.74 2.98-.74 1.39 0 1.78.74 3 .72 1.24-.02 2.02-1.13 2.78-2.25.87-1.29 1.23-2.54 1.25-2.6-.03-.01-2.4-.92-2.42-3.65ZM14.1 5.9c.63-.77 1.06-1.83.94-2.9-.91.04-2.01.61-2.67 1.37-.59.68-1.1 1.76-.96 2.8 1.01.08 2.05-.51 2.69-1.27Z"/></svg>
+          Mac App Store · $0.99
+        </a>
       </div>
-      <p class="hero-meta">Free &amp; open source · macOS 14+ · Apple Silicon &amp; Intel</p>
+      <p class="hero-meta">Free &amp; open source on GitHub · also on the Mac App Store · macOS 14+ · Apple Silicon &amp; Intel</p>
     </div>
     <div class="hero-shot reveal">
       <img src="assets/screenshots/dark-day.png" alt="CTMB dashboard: total tokens, estimated cost, per-model breakdown, rate-limit windows and daily activity heatmap" width="680" fetchpriority="high" />
@@ -444,8 +465,9 @@
       <p>Everything you might want to know before installing CTMB.</p>
     </div>
     <div class="faq-list">
-      <details class="faq reveal"><summary>Does CTMB send my data anywhere?</summary><p>No. CTMB only reads the local session files Claude Code writes on your Mac. It makes zero network requests, has no daemon and no accounts — your usage data never leaves your machine.</p></details>
+      <details class="faq reveal"><summary>Does CTMB send my data anywhere?</summary><p>No. CTMB reads the local session files Claude Code writes on your Mac — that data never leaves your machine. There is no daemon, no account and no telemetry. The only network request it ever makes is to the official usage endpoint, to read your own account's rate limits, and only when you are already signed in.</p></details>
       <details class="faq reveal"><summary>Is CTMB free?</summary><p>Yes. CTMB is free and open source under the MIT license. Download the DMG from GitHub releases, or build it from source.</p></details>
+      <details class="faq reveal"><summary>What's the difference between the GitHub version and the Mac App Store one?</summary><p>Same app, same features. The GitHub build is free and open source, but you update it yourself and have to clear Gatekeeper on first launch. The Mac App Store build costs $0.99, is sandboxed, updates automatically, and is listed as <em>Usage Monitor for AI Token</em> — App Store rules don't allow a third-party product name in the app's title. Buying it is also the easiest way to support the project.</p></details>
       <details class="faq reveal"><summary>What do I need to run CTMB?</summary><p>macOS 14 or later and Claude Code installed. CTMB is a universal binary that runs natively on both Apple Silicon and Intel Macs.</p></details>
       <details class="faq reveal"><summary>How accurate is the cost estimate?</summary><p>When a session entry already includes an exact cost, CTMB uses it directly. Otherwise it calculates cost from the official Anthropic pricing table for each model — Fable&nbsp;5, Opus, Sonnet and Haiku.</p></details>
       <details class="faq reveal"><summary>Do I need claude-code-usage-monitor?</summary><p>No. Core token, cost and history tracking works standalone. The official 5-hour and 7-day rate-limit windows appear as an optional enhancement when the <a href="https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor" target="_blank" rel="noopener">claude-code-usage-monitor</a> tool is also running.</p></details>
@@ -460,6 +482,7 @@
       <p>Download the DMG, drag CTMB to Applications, and it lands in your menu bar instantly — no Dock icon, no setup.</p>
       <div class="cta-row" style="justify-content:center">
         <a class="btn btn-white" href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS/releases/latest" target="_blank" rel="noopener">Download the latest DMG</a>
+        <a class="btn btn-outline" href="https://apps.apple.com/app/id6762977291?mt=12" target="_blank" rel="noopener">Get it on the Mac App Store</a>
         <a class="btn btn-outline" href="https://github.com/HAOGRE/ClaudeTokenMonitorBar-macOS" target="_blank" rel="noopener">Star on GitHub</a>
       </div>
     </div>
@@ -510,6 +533,20 @@
       .then(r=>r.ok?r.json():null)
       .then(d=>{ if(d&&d.tag_name){ el.textContent=d.tag_name; try{sessionStorage.setItem('ctmb_ver',d.tag_name);}catch(e){} }})
       .catch(()=>{});
+  })();
+
+  // App Store storefront: a country-less /app/id… URL gets bounced to the visitor's
+  // storefront home rather than the product page (verified from a CN network — Xcode
+  // and WhatsApp links behave identically). Prefix the region from the browser locale
+  // when there is one; otherwise leave the country-less link as the fallback.
+  (function(){
+    const parts=(navigator.language||'').split('-');
+    const region=parts.length>1?parts[parts.length-1]:'';
+    if(!/^[A-Za-z]{2}$/.test(region)) return;
+    const cc=region.toLowerCase();
+    document.querySelectorAll('a[href^="https://apps.apple.com/"]').forEach(a=>{
+      a.href=`https://apps.apple.com/${cc}/app/id6762977291?mt=12`;
+    });
   })();
 </script>
 </body>
