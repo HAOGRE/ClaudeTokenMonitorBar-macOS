@@ -2,7 +2,9 @@
 # Deploy the CTMB website to the VPS. TLS terminated by Cloudflare.
 set -euo pipefail
 
-HOST="${CTMB_HOST:?Set CTMB_HOST to the private deployment target}"
+# Defaults to the `dmit` SSH alias — an alias name gives nothing away, so it can
+# live here while the origin address and login stay in ~/.ssh/config.
+HOST="${CTMB_HOST:-dmit}"
 WEBROOT="/var/www/ctmb"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
